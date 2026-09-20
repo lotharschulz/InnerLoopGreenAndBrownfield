@@ -3,9 +3,9 @@
 This repository showcases two claude code **verification hook** setups, compared side by side. 
 The application code is a word-frequency counter and could be any other code as well in two folders:
 
-- `greenfield_word_freq/` — the simplest gate that closes the loop: two hooks, one
+- [greenfield_word_freq](./greenfield_word_freq) — the simplest gate that closes the loop: two hooks, one
   fingerprint cache, always runs the full check.
-- `brownfield_word_freq/` — a gate built for a repo with real history and an
+- [brownfield_word_freq](./brownfield_word_freq) — a gate built for a repo with real history and an
   expensive verify pass: four hooks, change-scoped fast paths, size-based escalation.
 
 This way you can compare the different hook setup based on the same code.
@@ -118,7 +118,7 @@ that decides whether the turn may end, dashed = an optional or short-circuit pat
 - Atomic `mkdir` lock with a 15-minute stale-lock reaper, so a hard-killed run can't
   wedge the gate shut forever
 - Full contract, including the no-git-repo edge case and state layout: see
-  `greenfield_word_freq/.claude/hooks/README.md`
+  [`greenfield_word_freq/.claude/hooks/README.md`](./greenfield_word_freq/.claude/hooks/README.md)
 
 **Reach for this when:** the project is small enough, or new enough, that a full
 `fmt`/`clippy`/`test` pass is cheap on every Stop — the fingerprint cache alone is

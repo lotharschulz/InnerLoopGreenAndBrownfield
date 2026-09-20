@@ -116,14 +116,14 @@ Numbers on the solid edges are the order of events, every turn:
    - **exit 1** (attempt = `MAX_ATTEMPTS = 3`) → the gate gives up and reports the
      failure to the user instead.
 
-**`verify.sh`** (no flags): 
+### **`verify.sh`** (no flags): 
 
 - `cargo fmt --all -- --check`
 - `cargo clippy --all-targets -- -D warnings`
 - `cargo test --manifest-path Cargo.toml` 
 - Note: `set -e`, so the first failure stops the script.
 
-**Hooks** (`.claude/settings.json`):
+### **Hooks** (`.claude/settings.json`):
 
 | Event | Script | Job |
 |---|---|---|
@@ -145,9 +145,12 @@ Numbers on the solid edges are the order of events, every turn:
 - Full contract, including the no-git-repo edge case and state layout: see
   [`greenfield_word_freq/.claude/hooks/README.md`](./greenfield_word_freq/.claude/hooks/README.md)
 
-**Reach for this when:** the project is small enough, or new enough, that a full
+### **Use Cases** 
+
+Reach for this when: the project is small enough, or new enough, that a full
 `fmt`/`clippy`/`test` pass is cheap on every Stop — the fingerprint cache alone is
 enough to skip redundant work (a revert, a question-only turn).
+
 
 ## Approach 2 — Brownfield
 
@@ -226,7 +229,7 @@ numbered sequence above: it only fires if a subagent did work mid-turn, runs
 `verify.sh --changed-only --no-escalate`, and sends the subagent back at most once —
 which is why it's drawn dashed.
 
-**`verify.sh`** is flag-driven:
+### **`verify.sh`** is flag-driven:
 
 | Flag | Effect |
 |---|---|
@@ -237,7 +240,7 @@ which is why it's drawn dashed.
 | `--no-escalate` | never escalate, whatever the diff size |
 | `--file=<path>` | format one file only, return before any whole-crate step |
 
-**Hooks:**
+### **Hooks:**
 
 | Event | Script | Job |
 |---|---|---|
@@ -275,12 +278,16 @@ proven green" for a crate it never actually hashed.
 
 Full contract: [`brownfield_word_freq/.claude/hooks/README.md`](./brownfield_word_freq/.claude/hooks/README.md).
 
-**Reach for this when:** `verify.sh` is too slow to run on every Stop unconditionally,
+### **Use Cases** 
+
+Reach for this when: `verify.sh` is too slow to run on every Stop unconditionally,
 the repo has enough history that "what changed this turn" is a meaningful question,
 or subagents fan out edits across a crate and each one needs its own cheap checkpoint
 before the main agent's full gate runs.
 
 **Note**: the code in [`brownfield_word_freq`](./brownfield_word_freq) repository is not brownfield, however the hook setups is made for brownfield situaions.
+
+---
 
 ## Side by side
 
@@ -296,6 +303,8 @@ before the main agent's full gate runs.
 Both share the same fingerprint shape (`rustc --version` + `src/` + `tests/` +
 `Cargo.toml` + `verify.sh`, `Cargo.lock` excluded) and the same Stop/SubagentStop exit
 contract (`0` pass, `2` blocking retry, `1` give-up).
+
+---
 
 ## Pre-commit hook
 
@@ -315,6 +324,8 @@ in **both** [`greenfield_word_freq`](./greenfield_word_freq) and [`brownfield_wo
 unconditionally, on _every_ commit. Either cratefailing blocks the commit. 
 Bypass option (**not recommended**): `git commit --no-verify`.
 
+---
+
 ## Getting started
 
 ```zsh
@@ -322,6 +333,8 @@ cd greenfield_word_freq        # or brownfield_word_freq
 cargo run -- input.txt
 bash verify.sh                 # exactly what the Stop hook runs, no cache in the way
 ```
+
+---
 
 ## Debugging the hooks
 

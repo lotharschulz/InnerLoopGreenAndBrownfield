@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# .githooks/pre-commit — blocks the commit unless verification passes in BOTH crates.
+#
+# Enable once per clone (not tracked by git itself, so this is a one-time step):
+#   git config core.hooksPath .githooks
+#
+# Runs the exact same command in each crate directory in turn. Deliberately NOT
+# change-scoped (unlike .claude/hooks/*/verify.sh --changed-only): a commit can touch
+# either crate or neither, and this hook has no cheap way to know which — so it always
+# checks both.
+set -uo pipefail
+
+CHECK='cargo test --manifest-path Cargo.toml && cargo fmt --all -- --check && cargo clippy'
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+CRATES=(brownfield_word_freq greenfield_word_freq)
+
+status=0
+for crate in "${CRATES[@]}"; do
+  echo "── $crate ──"
+  if (cd "$REPO_ROOT/$crate" && eval "$CHECK"); then
+    echo "✓ $crate passed"
+  else
+    echo "✗ $crate failed"
+    status=1
+  fi
+  echo ""
+done
+
+if [ "$status" -ne 0 ]; then
+  echo "Commit blocked — fix the failing crate(s) above."
+fi
+exit "$status"

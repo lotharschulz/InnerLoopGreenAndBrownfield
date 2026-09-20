@@ -138,3 +138,20 @@ cargo run -- input.txt
 cargo build --release
 ./target/release/brownfield_word_freq input.txt
 ```
+
+# Pre-commit hook
+
+One-time per clone (`.githooks/pre-commit` is tracked; `core.hooksPath` is local git
+config and is not):
+
+```zsh
+git config core.hooksPath .githooks
+```
+
+Blocks the commit unless `cargo test --manifest-path Cargo.toml && cargo fmt --all --
+--check && cargo clippy` passes in both `brownfield_word_freq/` and
+`greenfield_word_freq/`. Bypass (not recommended): `git commit --no-verify`.
+
+```zsh
+cd brownfield_word_freq && cargo test --manifest-path Cargo.toml && cargo fmt --all -- --check && cargo clippy && cd ../greenfield_word_freq && cargo test --manifest-path Cargo.toml && cargo fmt --all -- --check && cargo clippy && cd ..
+```

@@ -8,8 +8,7 @@ fn main() {
     let filename = args.get(1).map(|s| s.as_str()).unwrap_or("input.txt");
 
     // Read the file into a String
-    let contents = fs::read_to_string(filename)
-        .expect("Could not read file");
+    let contents = fs::read_to_string(filename).expect("Could not read file");
 
     // Count word frequencies
     let mut counts: HashMap<String, u32> = HashMap::new();

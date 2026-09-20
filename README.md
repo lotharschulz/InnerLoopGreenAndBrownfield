@@ -55,6 +55,42 @@ cargo test --manifest-path Cargo.toml && cargo fmt --all -- --check && cargo cli
 
 No history to protect, no expensive build to avoid — the gate always runs everything.
 
+```mermaid
+flowchart TD
+    Start(["User prompt"]):::start --> Edit
+
+    subgraph Turn["EACH TURN"]
+        direction TB
+        Edit["Agent edits a file<br/>(Edit / Write)"]:::exec
+        PostHook{{"PostToolUse<br/>post-edit-fmt.sh"}}:::hookEvent
+        Edit --> PostHook --> Edit
+        Edit --> Decide["agent decides it is done"]:::turnEvent
+        Decide --> StopHook["Stop / SubagentStop<br/>stop-verify.sh"]:::gate
+    end
+
+    PostNote["always exit 0 — never blocks"]:::optional
+    PostHook -.-> PostNote
+    CacheHit["fingerprint cache hit<br/>→ skip verify.sh entirely"]:::optional
+    StopHook -.-> CacheHit
+
+    StopHook -->|"exit 0 — pass, or cache hit"| Done(["Turn ends"]):::turnEvent
+    StopHook -->|"exit 2 — attempt < MAX_ATTEMPTS = 3<br/>fix and retry"| Edit
+
+    GiveUp["exit 1 — attempt = MAX_ATTEMPTS = 3<br/>gate gives up, reports to user"]:::optional
+    StopHook -.-> GiveUp
+
+    classDef start fill:#c9e4ca,stroke:#4b7a51,color:#1b3a1e;
+    classDef turnEvent fill:#e6e6e6,stroke:#6b6b6b,color:#1a1a1a;
+    classDef hookEvent fill:#fbe8c6,stroke:#c98a2b,color:#4a2e05;
+    classDef exec fill:#a9c9e3,stroke:#3d6f96,color:#0d2438;
+    classDef gate fill:#f3c6c6,stroke:#b23b3b,color:#4a1010;
+    classDef optional stroke-dasharray:4 3,fill:#f5f5f5,stroke:#999,color:#333;
+```
+
+Color key: green = start/end of the loop, gray = an agent-level checkpoint, tan = a
+`PostToolUse`-style per-edit hook, blue = the agent actually working, red = the gate
+that decides whether the turn may end, dashed = an optional or short-circuit path.
+
 **`verify.sh`** (no flags): 
 
 - `cargo fmt --all -- --check`
@@ -90,9 +126,54 @@ enough to skip redundant work (a revert, a question-only turn).
 
 ## Approach 2 — Brownfield
 
-A verify pass expensive enough (or a repo old enough) that running it in full on
-every Stop is wasteful. The gate narrows its scope to what actually changed, and only
-escalates to the expensive path when the change is large.
+A verify script run would be to expensive to run it for every stop.
+The gate filters for prompts that actually changed the code base. The expensive path is triggered only when the change is large.
+
+```mermaid
+flowchart TD
+    Start(["User prompt"]):::start --> Snap["UserPromptSubmit<br/>prompt-snapshot.sh"]:::turnEvent
+    SnapNote["records tree fingerprint<br/>prints nothing"]:::optional
+    Snap -.-> SnapNote
+    Snap --> Edit
+
+    subgraph Turn["EACH TURN"]
+        direction TB
+        Edit["Agent edits a file<br/>(Edit / Write)"]:::exec
+        PostHook{{"PostToolUse<br/>post-edit.sh"}}:::hookEvent
+        Edit --> PostHook --> Edit
+        Edit --> Decide["main agent decides it is done"]:::turnEvent
+        Decide --> TurnGate["Stop<br/>turn-gate.sh"]:::gate
+    end
+
+    PostNote["verify.sh --file=, silent<br/>always exit 0"]:::optional
+    PostHook -.-> PostNote
+
+    SubStop["SubagentStop — if a subagent was used<br/>subagent-gate.sh<br/>verify.sh --changed-only --no-escalate"]:::optional
+    Edit -.-> SubStop
+    SubStop -->|"exit 2 — first send-back only"| Edit
+
+    Skip1["turn snapshot unchanged<br/>→ skip verify.sh"]:::optional
+    Skip2["content already proven green<br/>→ skip verify.sh"]:::optional
+    TurnGate -.-> Skip1
+    TurnGate -.-> Skip2
+
+    TurnGate -->|"exit 0 — pass, or a skip above"| Done(["Turn ends"]):::turnEvent
+    TurnGate -->|"exit 2 — attempt < MAX_ATTEMPTS = 2<br/>fix and retry"| Edit
+
+    GiveUp["exit 1 — attempt = MAX_ATTEMPTS = 2<br/>gate gives up, reports to user"]:::optional
+    TurnGate -.-> GiveUp
+
+    classDef start fill:#c9e4ca,stroke:#4b7a51,color:#1b3a1e;
+    classDef turnEvent fill:#e6e6e6,stroke:#6b6b6b,color:#1a1a1a;
+    classDef hookEvent fill:#fbe8c6,stroke:#c98a2b,color:#4a2e05;
+    classDef exec fill:#a9c9e3,stroke:#3d6f96,color:#0d2438;
+    classDef gate fill:#f3c6c6,stroke:#b23b3b,color:#4a1010;
+    classDef optional stroke-dasharray:4 3,fill:#f5f5f5,stroke:#999,color:#333;
+```
+
+Same color key as above. `verify.sh --changed-only` (inside the `Stop` box) escalates
+to `--full` on its own once the diff reaches `THRESHOLD=100` changed lines — not drawn
+separately, since it's `verify.sh`'s own internal decision, not a hook boundary.
 
 **`verify.sh`** is flag-driven:
 
@@ -147,6 +228,8 @@ Full contract: `brownfield_word_freq/.claude/hooks/README.md`.
 the repo has enough history that "what changed this turn" is a meaningful question,
 or subagents fan out edits across a crate and each one needs its own cheap checkpoint
 before the main agent's full gate runs.
+
+**Note**: the code in `brownfield_word_freq` repository is not brownfield, however the hook setups is made for brownfield situaions.
 
 ## Side by side
 

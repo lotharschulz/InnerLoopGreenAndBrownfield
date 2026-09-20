@@ -1,0 +1,4 @@
+# Hook runtime state: audit log, per-session retry counters, turn snapshots, verdict
+# cache. Must stay ignored — otherwise these files show up in `git status`, which is
+# exactly what turn-gate.sh's turn short-circuit reads.
+.claude/gate/

@@ -23,7 +23,7 @@ terminates and reports instead of looping forever.
 
 ## The shared program
 
-The code in `greenfield_word_freq/src/main.rs` and `brownfield_word_freq/src/main.rs` are
+The code in [`greenfield_word_freq/src/main.rs`](./greenfield_word_freq/src/main.rs) and [`brownfield_word_freq/src/main.rs`](./brownfield_word_freq/src/main.rs) are
 identical. The implemented logic:
 - read a file (`argv[1]`, default `input.txt`)
 - splits on whitespace
@@ -222,14 +222,14 @@ hook's working directory has to equal the repo being gated. `turn-gate.sh` does
 sibling crate on disk (this repo has one), the cache can silently report "already
 proven green" for a crate it never actually hashed.
 
-Full contract: `brownfield_word_freq/.claude/hooks/README.md`.
+Full contract: [`brownfield_word_freq/.claude/hooks/README.md`](./brownfield_word_freq/.claude/hooks/README.md).
 
 **Reach for this when:** `verify.sh` is too slow to run on every Stop unconditionally,
 the repo has enough history that "what changed this turn" is a meaningful question,
 or subagents fan out edits across a crate and each one needs its own cheap checkpoint
 before the main agent's full gate runs.
 
-**Note**: the code in `brownfield_word_freq` repository is not brownfield, however the hook setups is made for brownfield situaions.
+**Note**: the code in [`brownfield_word_freq`](./brownfield_word_freq) repository is not brownfield, however the hook setups is made for brownfield situaions.
 
 ## Side by side
 
@@ -260,7 +260,7 @@ git config core.hooksPath .githooks
 
 It runs 
 ```cargo test --manifest-path Cargo.toml && cargo fmt --all -- --check && cargo clippy``` 
-in **both** `brownfield_word_freq/` and `greenfield_word_freq/`,
+in **both** [`greenfield_word_freq`](./greenfield_word_freq) and [`brownfield_word_freq`](./brownfield_word_freq),
 unconditionally, on _every_ commit. Either cratefailing blocks the commit. 
 Bypass option (**not recommended**): `git commit --no-verify`.
 

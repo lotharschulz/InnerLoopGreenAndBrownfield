@@ -3,9 +3,9 @@
 This repository showcases two claude code **verification hook** setups, compared side by side. 
 The application code is a word-frequency counter and could be any other code as well in two folders:
 
-- [greenfield_word_freq](./greenfield_word_freq) — the simplest gate that closes the loop: two hooks, one
+- [`greenfield_word_freq`](./greenfield_word_freq) — the simplest gate that closes the loop: two hooks, one
   fingerprint cache, always runs the full check.
-- [brownfield_word_freq](./brownfield_word_freq) — a gate built for a repo with real history and an
+- [`brownfield_word_freq`](./brownfield_word_freq) — a gate built for a repo with real history and an
   expensive verify pass: four hooks, change-scoped fast paths, size-based escalation.
 
 This way you can compare the different hook setup based on the same code.
@@ -57,15 +57,15 @@ No history to protect, no expensive build to avoid — the gate always runs ever
 
 ```mermaid
 flowchart TD
-    Start(["User prompt"]):::start --> Edit
+    Start(["User prompt"]):::start -->|"1"| Edit
 
     subgraph Turn["EACH TURN"]
         direction TB
         Edit["Agent edits a file<br/>(Edit / Write)"]:::exec
         PostHook{{"PostToolUse<br/>post-edit-fmt.sh"}}:::hookEvent
-        Edit --> PostHook --> Edit
-        Edit --> Decide["agent decides it is done"]:::turnEvent
-        Decide --> StopHook["Stop / SubagentStop<br/>stop-verify.sh"]:::gate
+        Edit -->|"2"| PostHook -->|"3"| Edit
+        Edit -->|"4"| Decide["agent decides it is done"]:::turnEvent
+        Decide -->|"5"| StopHook["Stop / SubagentStop<br/>stop-verify.sh"]:::gate
     end
 
     PostNote["always exit 0 — never blocks"]:::optional
@@ -73,8 +73,8 @@ flowchart TD
     CacheHit["fingerprint cache hit<br/>→ skip verify.sh entirely"]:::optional
     StopHook -.-> CacheHit
 
-    StopHook -->|"exit 0 — pass, or cache hit"| Done(["Turn ends"]):::turnEvent
-    StopHook -->|"exit 2 — attempt < MAX_ATTEMPTS = 3<br/>fix and retry"| Edit
+    StopHook -->|"6 — exit 0 — pass, or cache hit"| Done(["Turn ends"]):::turnEvent
+    StopHook -->|"exit 2 — attempt < MAX_ATTEMPTS = 3<br/>fix and retry, back to 2"| Edit
 
     GiveUp["exit 1 — attempt = MAX_ATTEMPTS = 3<br/>gate gives up, reports to user"]:::optional
     StopHook -.-> GiveUp
@@ -90,6 +90,8 @@ flowchart TD
 Color key: green = start/end of the loop, gray = an agent-level checkpoint, tan = a
 `PostToolUse`-style per-edit hook, blue = the agent actually working, red = the gate
 that decides whether the turn may end, dashed = an optional or short-circuit path.
+Numbers on the solid edges are the order of events every turn; `2`/`3` repeat once per
+edit; the exit-2 path loops back to `2` rather than getting a new number.
 
 **`verify.sh`** (no flags): 
 
@@ -131,18 +133,18 @@ The gate filters for prompts that actually changed the code base. The expensive 
 
 ```mermaid
 flowchart TD
-    Start(["User prompt"]):::start --> Snap["UserPromptSubmit<br/>prompt-snapshot.sh"]:::turnEvent
+    Start(["User prompt"]):::start -->|"1"| Snap["UserPromptSubmit<br/>prompt-snapshot.sh"]:::hookEvent
     SnapNote["records tree fingerprint<br/>prints nothing"]:::optional
     Snap -.-> SnapNote
-    Snap --> Edit
+    Snap -->|"2"| Edit
 
     subgraph Turn["EACH TURN"]
         direction TB
         Edit["Agent edits a file<br/>(Edit / Write)"]:::exec
         PostHook{{"PostToolUse<br/>post-edit.sh"}}:::hookEvent
-        Edit --> PostHook --> Edit
-        Edit --> Decide["main agent decides it is done"]:::turnEvent
-        Decide --> TurnGate["Stop<br/>turn-gate.sh"]:::gate
+        Edit -->|"3"| PostHook -->|"4"| Edit
+        Edit -->|"5"| Decide["main agent decides it is done"]:::turnEvent
+        Decide -->|"6"| TurnGate["Stop Hook<br/>turn-gate.sh<br/>if changes → verify.sh"]:::gate
     end
 
     PostNote["verify.sh --file=, silent<br/>always exit 0"]:::optional
@@ -157,8 +159,8 @@ flowchart TD
     TurnGate -.-> Skip1
     TurnGate -.-> Skip2
 
-    TurnGate -->|"exit 0 — pass, or a skip above"| Done(["Turn ends"]):::turnEvent
-    TurnGate -->|"exit 2 — attempt < MAX_ATTEMPTS = 2<br/>fix and retry"| Edit
+    TurnGate -->|"7 — exit 0 — pass, or a skip above"| Done(["Turn ends"]):::turnEvent
+    TurnGate -->|"exit 2 — attempt < MAX_ATTEMPTS = 2<br/>fix and retry, back to 3"| Edit
 
     GiveUp["exit 1 — attempt = MAX_ATTEMPTS = 2<br/>gate gives up, reports to user"]:::optional
     TurnGate -.-> GiveUp
@@ -171,9 +173,15 @@ flowchart TD
     classDef optional stroke-dasharray:4 3,fill:#f5f5f5,stroke:#999,color:#333;
 ```
 
-Same color key as above. `verify.sh --changed-only` (inside the `Stop` box) escalates
-to `--full` on its own once the diff reaches `THRESHOLD=100` changed lines — not drawn
-separately, since it's `verify.sh`'s own internal decision, not a hook boundary.
+Numbers on the solid edges are the order of events every turn; `3`/`4` repeat once per
+edit; the exit-2 path loops back to `3` rather than getting a new number. `SubagentStop`,
+the skip shortcuts, and the give-up path are conditional, not part of every turn, so
+they're dashed and unnumbered.
+
+`prompt-snapshot.sh` (step 1) fires once at turn start (outside the loop);
+`turn-gate.sh` (step 6) is the gate that actually compares the snapshot to the current
+tree and decides what to do. `verify.sh --changed-only` (inside the `Stop` box)
+escalates to `--full` on its own once the diff reaches `THRESHOLD=100` changed lines.
 
 **`verify.sh`** is flag-driven:
 

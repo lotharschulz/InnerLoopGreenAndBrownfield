@@ -90,8 +90,31 @@ flowchart TD
 Color key: green = start/end of the loop, gray = an agent-level checkpoint, tan = a
 `PostToolUse`-style per-edit hook, blue = the agent actually working, red = the gate
 that decides whether the turn may end, dashed = an optional or short-circuit path.
-Numbers on the solid edges are the order of events every turn; `2`/`3` repeat once per
-edit; the exit-2 path loops back to `2` rather than getting a new number.
+
+### Procedural steps
+
+Numbers on the solid edges are the order of events, every turn:
+
+1. **User prompt** starts the turn.
+2. The agent edits a file (`Edit` / `Write`).
+3. [`PostToolUse`](./greenfield_word_freq/.claude/settings.json#L3-L14) fires →
+   [`post-edit-fmt.sh` formats that one file, always exits `0`](./greenfield_word_freq/.claude/hooks/post-edit-fmt.sh#L23-L33) —
+   never blocks.
+4. Control returns to the agent. Steps 2–3 repeat for every edit made this turn.
+5. The agent decides it is done and tries to stop.
+6. [`Stop` / `SubagentStop`](./greenfield_word_freq/.claude/settings.json#L15-L36) fires →
+   `stop-verify.sh` runs:
+   [checks the fingerprint cache](./greenfield_word_freq/.claude/hooks/stop-verify.sh#L81-L110)
+   first, then [runs `verify.sh`](./greenfield_word_freq/.claude/hooks/stop-verify.sh#L112-L114)
+   if it's not a cache hit.
+
+   Depending on [`stop-verify.sh`'s exit code](./greenfield_word_freq/.claude/hooks/stop-verify.sh#L6-L9)
+   (or the cache hit above):
+   - **exit 0** (pass, or a fingerprint cache hit) → the turn ends.
+   - **exit 2** (attempt < `MAX_ATTEMPTS = 3`) → the agent gets the failure on stderr,
+     fixes it, and control returns to step 2.
+   - **exit 1** (attempt = `MAX_ATTEMPTS = 3`) → the gate gives up and reports the
+     failure to the user instead.
 
 **`verify.sh`** (no flags): 
 
@@ -173,15 +196,35 @@ flowchart TD
     classDef optional stroke-dasharray:4 3,fill:#f5f5f5,stroke:#999,color:#333;
 ```
 
-Numbers on the solid edges are the order of events every turn; `3`/`4` repeat once per
-edit; the exit-2 path loops back to `3` rather than getting a new number. `SubagentStop`,
-the skip shortcuts, and the give-up path are conditional, not part of every turn, so
-they're dashed and unnumbered.
+### Procedural steps
 
-`prompt-snapshot.sh` (step 1) fires once at turn start (outside the loop);
-`turn-gate.sh` (step 6) is the gate that actually compares the snapshot to the current
-tree and decides what to do. `verify.sh --changed-only` (inside the `Stop` box)
-escalates to `--full` on its own once the diff reaches `THRESHOLD=100` changed lines.
+Numbers on the solid edges are the order of events, every turn:
+
+1. **User prompt** starts the turn → `UserPromptSubmit` fires → [`prompt-snapshot.sh`
+   records the working tree's fingerprint](./brownfield_word_freq/.claude/hooks/prompt-snapshot.sh#L18-L31). 
+   Prints nothing, so nothing is injected into the agent's context.
+2. The agent starts working on a file (`Edit` / `Write`).
+3. [`PostToolUse`](./brownfield_word_freq/.claude/settings.json#L14-L25) fires → `post-edit.sh` 
+   runs [`verify.sh --file=<edited file>`](./brownfield_word_freq/verify.sh#L43-L50). Silent, always exits `0`.
+4. Control returns to the agent. Steps 2–3 repeat for every edit made this turn.
+5. The agent decides it is done and tries to stop.
+6. `Stop` fires → [`turn-gate.sh`](./brownfield_word_freq/.claude/hooks/turn-gate.sh#L70-L164) runs: compares the current tree to the step-1
+   snapshot, and to the last content already proven green.
+   - unchanged since step 1, **or** matches proven-green content → `verify.sh` is
+     skipped entirely.
+   - otherwise → `verify.sh --changed-only` runs, escalating to `--full` on its own
+     once the diff reaches `THRESHOLD = 100` changed lines.
+7. Depending on [`verify.sh`'s exit code](./brownfield_word_freq/verify.sh#L17-L18) (or a skip above):
+   - **exit 0** → the turn ends.
+   - **exit 2** (attempt < `MAX_ATTEMPTS = 2`) → the agent gets the diagnostics on
+     stderr, fixes them, and control returns to step 3.
+   - **exit 1** (attempt = `MAX_ATTEMPTS = 2`) → the gate gives up and reports the
+     failure to the user instead.
+
+`SubagentStop` → `subagent-gate.sh` is a separate, conditional path, not part of the
+numbered sequence above: it only fires if a subagent did work mid-turn, runs
+`verify.sh --changed-only --no-escalate`, and sends the subagent back at most once —
+which is why it's drawn dashed.
 
 **`verify.sh`** is flag-driven:
 

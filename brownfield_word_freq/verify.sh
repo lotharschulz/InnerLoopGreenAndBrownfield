@@ -109,7 +109,7 @@ else
 fi
 
 # 2. Lint + compile — clippy subsumes compilation, so there is no separate build step.
-run_step "lint (cargo clippy -- -D warnings)" cargo clippy -- -D warnings
+run_step "lint (cargo clippy --all-targets -- -D warnings)" cargo clippy --all-targets -- -D warnings
 
 # 3. Tests — these used to sit behind `--full`, which meant any change under THRESHOLD
 # lines stopped the agent without running a single test. Tests are the whole point of

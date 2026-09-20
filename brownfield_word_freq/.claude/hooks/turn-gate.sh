@@ -28,6 +28,14 @@ event=$(field '.hook_event_name');    : "${event:=Stop}"
 agent=$(field '.agent_id');           : "${agent:=main}"   # empty for main agent
 
 repo="${CLAUDE_PROJECT_DIR:-.}"
+# Every relative path below — the repo-relative names `git ls-files` prints, plus
+# Cargo.toml and verify.sh — is resolved by whatever process consumes it, and `xargs
+# shasum` inherits this script's cwd, not git's -C. So the cwd must BE the repo: with a
+# same-shaped sibling crate on disk, repo-relative paths otherwise hash the WRONG crate
+# and the verdict cache reports "already proven green" for a repo it never looked at.
+# stop-verify.sh in the greenfield setup does the same cd for the same reason.
+cd "$repo" || exit 1
+repo="$PWD"   # canonical and absolute, so the "$repo/..." uses below survive the cd
 
 # Runtime state (audit log + retry counters + verdict cache) lives INSIDE the repo,
 # because the sandbox may block /tmp. MUST be gitignored — add `.claude/gate/` to
@@ -106,8 +114,8 @@ verdict_fingerprint() {
   local rustc_ver files_hash
   rustc_ver=$(rustc --version) || return 1
   files_hash=$(
-    { git -C "$repo" ls-files -coz --exclude-standard src
-      printf '%s\0' "$repo/Cargo.toml" "$verify"; } | xargs -0 shasum -a 256
+    { git -C "$repo" ls-files -coz --exclude-standard src tests
+      printf '%s\0' Cargo.toml verify.sh; } | xargs -0 shasum -a 256
   ) || return 1
   printf '%s\n%s\n' "$rustc_ver" "$files_hash" | shasum -a 256 | cut -d' ' -f1
 }

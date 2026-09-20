@@ -10,14 +10,16 @@ fix and retry — stderr is what the agent sees · `1` gave up after `MAX_ATTEMP
 consecutive failures, shown to the user rather than to the agent.
 
 **Fingerprinted** — a match skips re-running `verify.sh` entirely: `rustc --version`,
-every tracked *and* untracked file under `src/` (content-hashed, not just names),
-`Cargo.toml`, and `verify.sh` itself.
+every tracked *and* untracked file under `src/` and `tests/` (content-hashed, not just
+names), `Cargo.toml`, and `verify.sh` itself.
 
 **Deliberately NOT fingerprinted:** `Cargo.lock` (a dependency bump shouldn't
 invalidate the cache — revisit once this crate has real dependencies), and anything
-outside `src/` (add it to `compute_fingerprint` if a `tests/` or `build.rs` appears).
-No git repository means an *empty* fingerprint, which never matches, so verification
-runs in full rather than being silently skipped.
+outside `src/` and `tests/` (add it to `compute_fingerprint` if a `build.rs` appears).
+Leaving a source directory out is not a harmless omission: edits there would leave the
+fingerprint unchanged, so the gate would report a cache hit and skip verification
+entirely. No git repository means an *empty* fingerprint, which never matches, so
+verification runs in full rather than being silently skipped.
 
 **Retry budget** is per session and resets only on a green run or a cache hit — a
 session interrupted mid-failure starts the next one a step into the count.

@@ -83,7 +83,7 @@ compute_fingerprint() {
   local rustc_ver files_hash
   rustc_ver=$(rustc --version) || return 1
   files_hash=$(
-    { git ls-files -coz --exclude-standard src
+    { git ls-files -coz --exclude-standard src tests
       printf '%s\0' Cargo.toml verify.sh; } | xargs -0 shasum -a 256
   ) || return 1
   printf '%s\n%s\n' "$rustc_ver" "$files_hash" | shasum -a 256 | cut -d' ' -f1

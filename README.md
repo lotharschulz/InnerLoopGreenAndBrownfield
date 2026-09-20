@@ -15,21 +15,21 @@ Read this if you're deciding which shape of gate fits your code. You may adapt t
 ## Table of Contents
 
 - [Why hook into verification at all](#why-hook-into-verification-at-all)
-- [The shared program](#the-shared-program)
-- [Approach 1 — Greenfield](#approach-1--greenfield)
+- [The shared business logic/code](#the-shared-business-logiccode)
+- [Greenfield (approach 1)](#greenfield-approach-1)
   - [Procedural steps](#procedural-steps)
   - [`verify.sh` (no flags)](#verifysh-no-flags)
   - [Hooks (`.claude/settings.json`)](#hooks-claudesettingsjson)
   - [Use Cases](#use-cases)
-- [Approach 2 — Brownfield](#approach-2--brownfield)
+- [Brownfield (approach 2)](#brownfield-approach-2)
   - [Procedural steps](#procedural-steps-1)
   - [`verify.sh` is flag-driven](#verifysh-is-flag-driven)
   - [Hooks](#hooks)
   - [Use Cases](#use-cases-1)
 - [Side by side](#side-by-side)
 - [Pre-commit hook](#pre-commit-hook)
-- [Getting started](#getting-started)
 - [Debugging the hooks](#debugging-the-hooks)
+- [Getting started](#getting-started)
 
 ## Why hook into verification at all
 
@@ -40,7 +40,7 @@ These hooks make that gap physically closable: `PostToolUse` cleans up after eve
 turn on broken code. That setup works until a bounded retry budget is burned, so a genuinely stuck agent
 terminates and reports instead of looping forever.
 
-## The shared program
+## The shared business logic/code
 
 The code in [`greenfield_word_freq/src/main.rs`](./greenfield_word_freq/src/main.rs) and [`brownfield_word_freq/src/main.rs`](./brownfield_word_freq/src/main.rs) are
 identical. The implemented logic:
@@ -70,7 +70,7 @@ cargo test
 cargo test --manifest-path Cargo.toml && cargo fmt --all -- --check && cargo clippy
 ```
 
-## Approach 1 — Greenfield
+# Greenfield (approach 1)
 
 No history to protect, no expensive build to avoid — the gate always runs everything.
 
@@ -110,7 +110,7 @@ Color key: green = start/end of the loop, gray = an agent-level checkpoint, tan 
 `PostToolUse`-style per-edit hook, blue = the agent actually working, red = the gate
 that decides whether the turn may end, dashed = an optional or short-circuit path.
 
-### Procedural steps
+## Procedural steps
 
 Numbers on the solid edges are the order of events, every turn:
 
@@ -135,14 +135,14 @@ Numbers on the solid edges are the order of events, every turn:
    - **exit 1** (attempt = `MAX_ATTEMPTS = 3`) → the gate gives up and reports the
      failure to the user instead.
 
-### **`verify.sh`** (no flags): 
+## **`verify.sh`** (no flags): 
 
 - `cargo fmt --all -- --check`
 - `cargo clippy --all-targets -- -D warnings`
 - `cargo test --manifest-path Cargo.toml` 
 - Note: `set -e`, so the first failure stops the script.
 
-### **Hooks** (`.claude/settings.json`):
+## **Hooks** (`.claude/settings.json`):
 
 | Event | Script | Job |
 |---|---|---|
@@ -164,14 +164,14 @@ Numbers on the solid edges are the order of events, every turn:
 - Full contract, including the no-git-repo edge case and state layout: see
   [`greenfield_word_freq/.claude/hooks/README.md`](./greenfield_word_freq/.claude/hooks/README.md)
 
-### **Use Cases** 
+## **Use Cases** 
 
 Reach for this when: the project is small enough, or new enough, that a full
 `fmt`/`clippy`/`test` pass is cheap on every Stop — the fingerprint cache alone is
 enough to skip redundant work (a revert, a question-only turn).
 
 
-## Approach 2 — Brownfield
+# Brownfield (approach 2)
 
 A verify script run would be to expensive to run it for every stop.
 The gate filters for prompts that actually changed the code base. The expensive path is triggered only when the change is large.
@@ -218,7 +218,7 @@ flowchart TD
     classDef optional stroke-dasharray:4 3,fill:#f5f5f5,stroke:#999,color:#333;
 ```
 
-### Procedural steps
+## Procedural steps
 
 Numbers on the solid edges are the order of events, every turn:
 
@@ -248,7 +248,7 @@ numbered sequence above: it only fires if a subagent did work mid-turn, runs
 `verify.sh --changed-only --no-escalate`, and sends the subagent back at most once —
 which is why it's drawn dashed.
 
-### **`verify.sh`** is flag-driven:
+## **`verify.sh`** is flag-driven:
 
 | Flag | Effect |
 |---|---|
@@ -259,7 +259,7 @@ which is why it's drawn dashed.
 | `--no-escalate` | never escalate, whatever the diff size |
 | `--file=<path>` | format one file only, return before any whole-crate step |
 
-### **Hooks:**
+## **Hooks:**
 
 | Event | Script | Job |
 |---|---|---|
@@ -297,7 +297,7 @@ proven green" for a crate it never actually hashed.
 
 Full contract: [`brownfield_word_freq/.claude/hooks/README.md`](./brownfield_word_freq/.claude/hooks/README.md).
 
-### **Use Cases** 
+## **Use Cases** 
 
 Reach for this when: `verify.sh` is too slow to run on every Stop unconditionally,
 the repo has enough history that "what changed this turn" is a meaningful question,
@@ -308,7 +308,7 @@ before the main agent's full gate runs.
 
 ---
 
-## Side by side
+# Side by side
 
 | | Greenfield | Brownfield |
 |---|---|---|
@@ -325,7 +325,7 @@ contract (`0` pass, `2` blocking retry, `1` give-up).
 
 ---
 
-## Pre-commit hook
+# Pre-commit hook
 
 A third, independent gate — plain git, not a Claude Code hook, so it fires for a human
 `git commit` too, not just an agent's Stop.
@@ -345,17 +345,7 @@ Bypass option (**not recommended**): `git commit --no-verify`.
 
 ---
 
-## Getting started
-
-```zsh
-cd greenfield_word_freq        # or brownfield_word_freq
-cargo run -- input.txt
-bash verify.sh                 # exactly what the Stop hook runs, no cache in the way
-```
-
----
-
-## Debugging the hooks
+# Debugging the hooks
 
 - `claude --debug` — shows each hook command and its exit code as it runs
 - `/hooks` — shows what Claude Code actually loaded (settings are read at startup;
@@ -368,3 +358,13 @@ bash verify.sh                 # exactly what the Stop hook runs, no cache in th
 
 [^1]: [OpenAI – Hugging Face Incident](https://cdn.openai.com/pdf/67869394-cb91-4c12-888c-5cbd85c7814c/OpenAI-Hugging-Face%20Incident-Technical-Report.pdf) reads:
     “_the models did not have OpenAI’s deployed cyber safeguards, system prompts, or auto-review systems_”
+
+---
+
+# Getting started
+
+```zsh
+cd greenfield_word_freq        # or brownfield_word_freq
+cargo run -- input.txt
+bash verify.sh                 # exactly what the Stop hook runs, no cache in the way
+```

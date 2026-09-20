@@ -14,7 +14,7 @@ Read this if you're deciding which shape of gate fits your code. You may adapt t
 
 ## Why hook into verification at all
 
-Rules and definitions in context files (CLAUDE.md or AGENTS.md etc ...) are usually followed, however this is not a guarantee [1]. 
+Rules and definitions in context files (CLAUDE.md or AGENTS.md etc ...) are usually followed, however this is not a guarantee [^1]. 
 A hook is a shell command that Claude Code runs deterministically at a defined point in the loop. 
 This command can inspect the results Claude Code produced. Context file instruction is probabilistic compliance, a hook is a hard gate. 
 These hooks make that gap physically closable: `PostToolUse` cleans up after every edit, and `Stop`/`SubagentStop` refuse to let the agent finish a
@@ -283,7 +283,5 @@ bash verify.sh                 # exactly what the Stop hook runs, no cache in th
 - `bash .claude/hooks/fingerprint-check.sh` (brownfield only) — regression check for
   the verdict cache described above
 
----
-
-[1] [OpenAI – Hugging Face Incident](https://cdn.openai.com/pdf/67869394-cb91-4c12-888c-5cbd85c7814c/OpenAI-Hugging-Face%20Incident-Technical-Report.pdf) reads: 
-“_the models did not have OpenAI’s deployed cyber safeguards, system prompts, or auto-review systems_”
+[^1]: [OpenAI – Hugging Face Incident](https://cdn.openai.com/pdf/67869394-cb91-4c12-888c-5cbd85c7814c/OpenAI-Hugging-Face%20Incident-Technical-Report.pdf) reads:
+    “_the models did not have OpenAI’s deployed cyber safeguards, system prompts, or auto-review systems_”

@@ -12,6 +12,25 @@ This way you can compare the different hook setup based on the same code.
 
 Read this if you're deciding which shape of gate fits your code. You may adapt that (using AI) to other tech stacks.
 
+## Table of Contents
+
+- [Why hook into verification at all](#why-hook-into-verification-at-all)
+- [The shared program](#the-shared-program)
+- [Approach 1 — Greenfield](#approach-1--greenfield)
+  - [Procedural steps](#procedural-steps)
+  - [`verify.sh` (no flags)](#verifysh-no-flags)
+  - [Hooks (`.claude/settings.json`)](#hooks-claudesettingsjson)
+  - [Use Cases](#use-cases)
+- [Approach 2 — Brownfield](#approach-2--brownfield)
+  - [Procedural steps](#procedural-steps-1)
+  - [`verify.sh` is flag-driven](#verifysh-is-flag-driven)
+  - [Hooks](#hooks)
+  - [Use Cases](#use-cases-1)
+- [Side by side](#side-by-side)
+- [Pre-commit hook](#pre-commit-hook)
+- [Getting started](#getting-started)
+- [Debugging the hooks](#debugging-the-hooks)
+
 ## Why hook into verification at all
 
 Rules and definitions in context files (CLAUDE.md or AGENTS.md etc ...) are usually followed, however this is not a guarantee [^1]. 

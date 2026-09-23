@@ -1,0 +1,2 @@
+2026-09-23T22:11:08+02:00 turn-gate fired: event=Stop agent=main session=1154e50a-728c-4dd7-802f-6be8f670114f
+2026-09-23T22:11:08+02:00 verify passed

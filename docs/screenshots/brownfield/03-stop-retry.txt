@@ -1,2 +1,72 @@
-2026-09-23T22:11:08+02:00 turn-gate fired: event=Stop agent=main session=1154e50a-728c-4dd7-802f-6be8f670114f
-2026-09-23T22:11:08+02:00 verify passed
+2026-09-23T22:53:21+02:00 turn-gate fired: event=Stop agent=main session=6f4d7284-cbd9-4f64-b73e-2387c4523178
+2026-09-23T22:53:21+02:00 no changes this turn — skipped
+☁  brownfield_word_freq [main] ⚡  cat .claude/gate/gate.log
+2026-09-23T22:58:18+02:00 turn-gate fired: event=Stop agent=main session=998fa8fa-8572-4e49-93c9-36039d5febcc
+Validation failed (attempt 1/2). Fix these before finishing:
+
+▶ format (cargo fmt --all -- --check)
+✓ format (cargo fmt --all -- --check)
+
+▶ lint (cargo clippy --all-targets -- -D warnings)
+✗ lint (cargo clippy --all-targets -- -D warnings)
+    Checking brownfield_word_freq v0.1.0 (/Users/lotharschulz/Code/InnerLoopGreenAndBrownfield/brownfield_word_freq)
+error: unused variable: `x`
+   --> src/main.rs:203:9
+    |
+203 |     let x = 5;
+    |         ^ help: if this is intentional, prefix it with an underscore: `_x`
+    |
+    = note: `-D unused-variables` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unused_variables)]`
+
+error: items after a test module
+   --> src/main.rs:62:1
+    |
+ 62 | mod tests {
+    | ^^^^^^^^^
+...
+202 | fn _demo_retry() {
+    | ^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#items_after_test_module
+    = note: `-D clippy::items-after-test-module` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::items_after_test_module)]`
+    = help: move the items to before the test module was defined
+
+error: could not compile `brownfield_word_freq` (bin "brownfield_word_freq") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `brownfield_word_freq` (bin "brownfield_word_freq" test) due to 2 previous errors
+
+▶ tests (cargo test)
+✓ tests (cargo test)
+
+Failed: lint (cargo clippy --all-targets -- -D warnings)
+
+=== First failure: lint (cargo clippy --all-targets -- -D warnings) ===
+    Checking brownfield_word_freq v0.1.0 (/Users/lotharschulz/Code/InnerLoopGreenAndBrownfield/brownfield_word_freq)
+error: unused variable: `x`
+   --> src/main.rs:203:9
+    |
+203 |     let x = 5;
+    |         ^ help: if this is intentional, prefix it with an underscore: `_x`
+    |
+    = note: `-D unused-variables` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unused_variables)]`
+
+error: items after a test module
+   --> src/main.rs:62:1
+    |
+ 62 | mod tests {
+    | ^^^^^^^^^
+...
+202 | fn _demo_retry() {
+    | ^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#items_after_test_module
+    = note: `-D clippy::items-after-test-module` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::items_after_test_module)]`
+    = help: move the items to before the test module was defined
+
+error: could not compile `brownfield_word_freq` (bin "brownfield_word_freq") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `brownfield_word_freq` (bin "brownfield_word_freq" test) due to 2 previous errors

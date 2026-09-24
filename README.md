@@ -27,6 +27,7 @@ Read this if you're deciding which shape of gate fits your code. You may adapt t
   - [Hooks](#hooks)
   - [Use Cases](#use-cases-1)
 - [Side by side](#side-by-side)
+- [Example turns (screenshots)](#example-turns-screenshots)
 - [Pre-commit hook](#pre-commit-hook)
 - [Debugging the hooks](#debugging-the-hooks)
 - [Getting started](#getting-started)
@@ -322,6 +323,53 @@ before the main agent's full gate runs.
 Both share the same fingerprint shape (`rustc --version` + `src/` + `tests/` +
 `Cargo.toml` + `verify.sh`, `Cargo.lock` excluded) and the same Stop/SubagentStop exit
 contract (`0` pass, `2` blocking retry, `1` give-up).
+
+---
+
+# Example turns (screenshots)
+
+Real terminal captures of hook stages for both: greenfield and brownfield.
+Step numbers match the [greenfield procedural steps](#procedural-steps) as 
+well as the [ brownfield procedural steps](#procedural-steps-1) above.
+
+## Greenfield
+
+**1 — user prompt**
+![Greenfield: user prompt](docs/screenshots/greenfield/01-user-prompt.png)
+
+**2 — agent edits `src/main.rs`**
+![Greenfield: agent edit](docs/screenshots/greenfield/02-agent-edit.png)
+
+**6 — `stop-verify.sh`, exit 0 (pass)**
+![Greenfield: Stop pass](docs/screenshots/greenfield/03-stop-pass.png)
+
+**6 — `stop-verify.sh`, exit 2 (`attempt 1/3`, agent fixes, retries, passes)**
+![Greenfield: Stop retry](docs/screenshots/greenfield/03-stop-retry.png)
+
+**6 — `stop-verify.sh`, exit 1 (`MAX_ATTEMPTS=3` exhausted, gives up)**
+![Greenfield: Stop give up](docs/screenshots/greenfield/03-stop-giveup.png)
+
+## Brownfield
+
+**1 — user prompt** (`prompt-snapshot.sh` fires silently)
+![Brownfield: user prompt](docs/screenshots/brownfield/01-user-prompt.png)
+
+**2 — agent edits `src/main.rs`**
+![Brownfield: agent edit](docs/screenshots/brownfield/02-agent-edit.png)
+
+**6/7 — `turn-gate.sh`, exit 0 (pass)**
+![Brownfield: turn-gate pass](docs/screenshots/brownfield/03-stop-pass.png)
+
+**6/7 — `turn-gate.sh`, exit 2 (`attempt 1/2`, agent fixes, retries, passes)**
+![Brownfield: turn-gate retry](docs/screenshots/brownfield/03-stop-retry.png)
+
+**6/7 — `turn-gate.sh`, exit 1 (`MAX_ATTEMPTS=2` exhausted, gives up)**
+![Brownfield: turn-gate give up](docs/screenshots/brownfield/03-stop-giveup.png)
+
+Both the retry and give-up captures use the same deterministic-failure trick: an
+unused-variable function for retry, an unconditionally-`false` test assertion for
+give-up. Neither fixable by editing `src/main.rs` alone. It is exactly what
+exercises the retry budget and the give-up path.
 
 ---
 

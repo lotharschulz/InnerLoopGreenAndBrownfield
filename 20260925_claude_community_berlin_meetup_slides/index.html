@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Beyond the Code</title>
+<meta name="description" content="Verify Script as Inner Feedback Loop — Lothar Schulz, Claude Community Berlin Meetup, 25 Sep 2026">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F3EEE6;
+    --card: #FFFDF9;
+    --ink: #221E1A;
+    --muted: #6B625A;
+    --line: #E4DACD;
+    --accent: #C96442;
+    --accent-soft: #F6DDD0;
+    --teal: #2F8A91;
+    --teal-dark: #1F5B63;
+    --navy: #26324A;
+    --green: #3F7D4E;
+    --green-soft: #DCEBDD;
+    --red: #B23B3B;
+    --red-soft: #F5D6D6;
+    --amber: #B7791F;
+    --amber-soft: #F8E7C8;
+    --blue-soft: #D7E6F2;
+    --term-bg: #1D1B19;
+    --term-ink: #E8E2D9;
+    --font-head: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+    --font-body: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; }
+  body {
+    background: radial-gradient(circle at 50% 40%, #F8F4EE 0%, var(--bg) 70%);
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+  #camera { position: absolute; left: 50%; top: 50%; width: 0; height: 0; transform-origin: 0 0; }
+
+  /* ---------- world: nested feedback loops ---------- */
+  #rings { position: absolute; left: -8000px; top: -8000px; width: 16000px; height: 16000px; pointer-events: none; }
+
+  /* ---------- steps ---------- */
+  .step {
+    position: absolute; left: -800px; top: -450px; width: 1600px; height: 900px;
+    transform-origin: 50% 50%;
+    transition: opacity .6s ease;
+  }
+  .card {
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: 40px;
+    padding: 64px 84px;
+    box-shadow: 0 30px 80px -30px rgba(60, 40, 20, .28);
+    opacity: .5;
+    cursor: pointer;
+    display: flex; flex-direction: column;
+  }
+  .card.active { opacity: 1; cursor: default; }
+  body.frame-active .card { opacity: .95; }
+  .frame { pointer-events: none; }
+  .frame .panel {
+    pointer-events: auto;
+    position: absolute; top: 50%; transform: translateY(-50%);
+    background: rgba(255, 253, 249, .94);
+    border: 2px solid var(--line);
+    border-radius: 28px;
+    padding: 34px 34px;
+    box-shadow: 0 20px 50px -24px rgba(60, 40, 20, .3);
+    opacity: 0; transition: opacity .6s ease .2s;
+  }
+  .frame.active .panel { opacity: 1; }
+
+  /* ---------- typography ---------- */
+  .kicker { font: 600 22px/1.2 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 18px; }
+  h1, h2, h3 { font-family: var(--font-head); font-weight: 700; letter-spacing: -.02em; }
+  h2 { font-size: 64px; line-height: 1.05; margin-bottom: 28px; }
+  h3 { font-size: 32px; line-height: 1.15; margin-bottom: 14px; }
+  p, li { font-size: 28px; line-height: 1.4; }
+  .muted { color: var(--muted); }
+  .accent { color: var(--accent); }
+  code, .mono { font-family: var(--font-mono); font-size: .88em; }
+  p code, li code, td code { background: #F1EAE0; padding: 1px 8px; border-radius: 8px; }
+  ul.clean { list-style: none; }
+  ul.clean li { padding-left: 34px; position: relative; margin-bottom: 12px; }
+  ul.clean li::before { content: ""; position: absolute; left: 4px; top: 15px; width: 12px; height: 12px; border-radius: 50%; background: var(--accent); }
+  .grow { flex: 1; min-height: 0; }
+  .cols { display: grid; gap: 56px; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .quote {
+    font-family: var(--font-head); font-weight: 500; font-size: 34px; line-height: 1.3;
+    border-left: 8px solid var(--accent); padding: 6px 0 6px 28px;
+  }
+  .pill {
+    display: inline-block; font: 600 22px/1 var(--font-mono);
+    padding: 10px 16px; border-radius: 999px; background: var(--accent-soft); color: #7A3319;
+    margin: 0 8px 10px 0;
+  }
+  .pill.teal { background: #D5EBEC; color: var(--teal-dark); }
+  .pill.green { background: var(--green-soft); color: #22502D; }
+  .pill.red { background: var(--red-soft); color: #7A1F1F; }
+  .pill.amber { background: var(--amber-soft); color: #6B4508; }
+  .pill.gray { background: #ECE6DE; color: #4A433C; }
+
+  pre.code {
+    background: var(--term-bg); color: var(--term-ink);
+    font: 400 21px/1.5 var(--font-mono);
+    padding: 26px 30px; border-radius: 22px; white-space: pre; overflow: hidden;
+  }
+  pre.code .c { color: #8E857A; }
+  pre.code .k { color: #F0A57F; }
+  pre.code .s { color: #A9D3A0; }
+  pre.code .e { color: #F28B82; }
+  pre.code .ok { color: #8FD19E; }
+  pre.code .w { color: #F3C969; }
+
+  table.t { width: 100%; border-collapse: collapse; font-size: 24px; }
+  table.t th { text-align: left; font: 600 20px/1.2 var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 10px 14px; border-bottom: 2px solid var(--line); }
+  table.t td { padding: 12px 14px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.35; }
+  table.t td:first-child { white-space: nowrap; }
+
+  /* ---------- title ---------- */
+  #title { justify-content: center; padding: 80px 110px; background: var(--card); }
+  #title h1 { font-size: 116px; line-height: .98; }
+  #title .sub { font-family: var(--font-head); font-weight: 500; font-size: 58px; color: var(--accent); margin-top: 18px; }
+  #title .who { margin-top: 64px; font-size: 32px; }
+  #title .who b { font-family: var(--font-head); font-size: 40px; display: block; margin-bottom: 6px; }
+  #title .loops { position: absolute; right: 70px; top: 50%; transform: translateY(-50%); }
+
+  /* ---------- intro ---------- */
+  #intro { display: grid; grid-template-columns: 860px 1fr; grid-template-rows: auto auto; gap: 44px 56px; align-content: center; }
+  #intro .product { width: 860px; height: 475px; object-fit: cover; border-radius: 26px; box-shadow: 0 0 0 2px var(--line); }
+  #intro .about { display: flex; flex-direction: column; justify-content: center; }
+  #intro h2 { font-size: 66px; margin-bottom: 6px; }
+  #intro .role { font-size: 30px; color: var(--muted); margin-bottom: 30px; }
+  #intro .faces { display: flex; align-items: center; gap: 28px; }
+  #intro .photo { width: 180px; height: 180px; border-radius: 50%; object-fit: cover; border: 8px solid var(--accent-soft); flex: none; }
+  #intro .qr { width: 170px; height: 170px; image-rendering: pixelated; border-radius: 12px; border: 6px solid #fff; box-shadow: 0 0 0 2px var(--line); }
+  #intro .links { grid-column: 1 / -1; display: flex; justify-content: space-between; font: 500 23px/1.3 var(--font-mono); }
+  #intro .links a { color: var(--ink); text-decoration: none; border-bottom: 2px solid var(--accent-soft); }
+
+  /* ---------- feedback loop diagram ---------- */
+  .aoc { display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px; margin: 10px 0 18px; }
+  .aoc .box { background: #F7F1E9; border: 2px solid var(--line); border-radius: 24px; padding: 24px 24px; position: relative; }
+  .aoc .box b { font: 700 36px/1 var(--font-head); display: block; margin-bottom: 10px; }
+  .aoc .box span { font-size: 22px; line-height: 1.35; color: var(--muted); display: block; }
+  .aoc .box:not(:last-child)::after { content: "→"; position: absolute; right: -24px; top: 26px; font: 700 30px/1 var(--font-head); color: var(--accent); }
+  .aoc .box.act { background: var(--blue-soft); }
+  .aoc .box.obs { background: var(--amber-soft); }
+  .aoc .box.cor { background: var(--green-soft); }
+  .backarrow { text-align: center; font: 500 22px/1 var(--font-mono); color: var(--accent); margin-bottom: 30px; }
+
+  /* ---------- hook lifecycle ---------- */
+  .lc { border-radius: 24px; padding: 18px 22px; position: relative; }
+  .lc .lab { font: 600 19px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .08em; margin-bottom: 12px; display: flex; justify-content: space-between; }
+  .lc.session { border: 3px solid var(--navy); background: #F7F3ED; }
+  .lc.session > .lab { color: var(--navy); }
+  .lc.turn { border: 3px solid var(--teal); background: #EEF6F5; margin: 10px 0; }
+  .lc.turn > .lab { color: var(--teal-dark); }
+  .lc.loop { border: 3px dashed var(--accent); background: #FCF1EB; margin: 10px 0; }
+  .lc.loop > .lab { color: var(--accent); }
+  .ev { display: inline-block; font: 600 20px/1 var(--font-mono); padding: 9px 13px; border-radius: 10px; background: #fff; border: 2px solid var(--line); margin: 3px 4px 3px 0; color: #4A433C; }
+  .ev.used { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .arrow { font: 700 24px/1 var(--font-head); color: var(--muted); }
+
+  /* ---------- flows (blueprints) ---------- */
+  .steps { counter-reset: s; list-style: none; }
+  .steps li { position: relative; padding-left: 58px; margin-bottom: 13px; font-size: 24px; line-height: 1.35; }
+  .steps li::before {
+    counter-increment: s; content: counter(s);
+    position: absolute; left: 0; top: -2px; width: 40px; height: 40px; border-radius: 50%;
+    background: var(--ink); color: #fff; font: 700 22px/40px var(--font-head); text-align: center;
+  }
+  .steps li.hook::before { background: var(--amber); }
+  .steps li.gate::before { background: var(--red); }
+  .steps li.exec::before { background: #3D6F96; }
+  .steps li.start::before { background: var(--green); }
+  .steps .sub { display: block; font-size: 21px; color: var(--muted); margin-top: 4px; }
+  .exits { display: grid; gap: 10px; margin-top: 6px; }
+  .exits div { font-size: 22px; line-height: 1.3; padding: 10px 14px; border-radius: 14px; }
+  .exits .x0 { background: var(--green-soft); }
+  .exits .x2 { background: var(--amber-soft); }
+  .exits .x1 { background: var(--red-soft); }
+  .exits b { font-family: var(--font-mono); }
+  .files { font: 400 21px/1.55 var(--font-mono); background: #F7F1E9; border: 2px solid var(--line); border-radius: 20px; padding: 18px 22px; }
+  .files .h { color: var(--accent); font-weight: 600; }
+  .files .d { color: var(--muted); }
+  .legend { font-size: 19px; color: var(--muted); margin-top: 6px; }
+  .legend i { display: inline-block; width: 14px; height: 14px; border-radius: 50%; margin: 0 6px 0 14px; vertical-align: -1px; }
+
+  /* ---------- side panels in frames ---------- */
+  .panel h3 { font-size: 30px; }
+  .panel p, .panel li { font-size: 22px; line-height: 1.38; }
+  .panel .quote { font-size: 25px; border-left-width: 6px; padding-left: 18px; }
+  .panel .tier { border-radius: 14px; padding: 10px 14px; margin-bottom: 10px; font-size: 20px; line-height: 1.35; }
+  .panel .tier b { display: block; font: 700 21px/1.2 var(--font-head); margin-bottom: 2px; }
+  .panel ol { padding-left: 28px; }
+  .panel ol li { margin-bottom: 7px; }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; left: 0; right: 0; bottom: 0; pointer-events: none; }
+  #progress { height: 5px; background: var(--accent); width: 0; transition: width .6s ease; }
+  #counter { position: fixed; right: 18px; bottom: 14px; font: 500 14px/1 var(--font-mono); color: var(--muted); }
+  #hint {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+    font: 500 14px/1 var(--font-mono); color: var(--muted);
+    background: rgba(255, 253, 249, .9); border: 1px solid var(--line); padding: 10px 16px; border-radius: 999px;
+    transition: opacity 1s ease;
+  }
+  #hint.gone { opacity: 0; }
+  @media (max-width: 640px) {
+    #hint { font-size: 11px; white-space: nowrap; }
+  }
+</style>
+</head>
+<body>
+
+<div id="camera">
+
+  <!-- The canvas is the nested feedback-loop diagram: the talk spirals inward. -->
+  <svg id="rings" viewBox="-8000 -8000 16000 16000" aria-hidden="true">
+    <g fill="none">
+      <circle r="7400" stroke="#26324A" stroke-width="26"/>
+      <circle r="5400" stroke="#1F5B63" stroke-width="26"/>
+      <circle r="3600" stroke="#2F8A91" stroke-width="26"/>
+      <circle r="1500" stroke="#C96442" stroke-width="30" fill="#FBE9DF"/>
+    </g>
+    <g>
+      <path d="M -170 7400 L 90 7250 L 90 7550 Z" fill="#26324A"/>
+      <path d="M -170 5400 L 90 5250 L 90 5550 Z" fill="#1F5B63"/>
+      <path d="M -170 3600 L 90 3450 L 90 3750 Z" fill="#2F8A91"/>
+      <path d="M -150 1500 L 80 1370 L 80 1630 Z" fill="#C96442"/>
+    </g>
+    <g font-family="JetBrains Mono, monospace" font-weight="600" text-anchor="middle">
+      <g transform="translate(-7400 0) rotate(-90)">
+        <rect x="-1250" y="-190" width="2500" height="300" rx="150" fill="#F3EEE6"/>
+        <text y="40" font-size="210" fill="#26324A">USERS · days</text>
+      </g>
+      <g transform="translate(-5400 0) rotate(-90)">
+        <rect x="-1850" y="-190" width="3700" height="300" rx="150" fill="#F3EEE6"/>
+        <text y="40" font-size="210" fill="#1F5B63">DEPLOY + OPERATE · hours</text>
+      </g>
+      <g transform="translate(-3600 0) rotate(-90)">
+        <rect x="-1050" y="-190" width="2100" height="300" rx="150" fill="#F3EEE6"/>
+        <text y="40" font-size="210" fill="#2F8A91">CI · minutes</text>
+      </g>
+      <g transform="translate(-1500 0) rotate(-90)">
+        <rect x="-760" y="-120" width="1520" height="200" rx="100" fill="#FBE9DF"/>
+        <text y="28" font-size="130" fill="#C96442">EDITOR · seconds</text>
+      </g>
+    </g>
+  </svg>
+
+  <!-- 1 · Title -->
+  <section class="step card" id="title" data-x="0" data-y="-9800" data-scale="3">
+    <div class="kicker">Claude Community Berlin · 25 Sep 2026 · NLND Berlin</div>
+    <h1>Beyond the Code</h1>
+    <div class="sub">Verify Script as<br>Inner Feedback Loop</div>
+    <div class="who"><b>Lothar Schulz</b><span class="muted">CTO · pulsation IT GmbH</span></div>
+    <svg class="loops" width="360" height="360" viewBox="-210 -210 420 420" aria-hidden="true">
+      <circle r="200" fill="none" stroke="#26324A" stroke-width="6"/>
+      <circle r="148" fill="none" stroke="#1F5B63" stroke-width="6"/>
+      <circle r="98" fill="none" stroke="#2F8A91" stroke-width="6"/>
+      <circle r="44" fill="#FBE9DF" stroke="#C96442" stroke-width="7"/>
+      <path d="M -12 200 L 8 188 L 8 212 Z" fill="#26324A"/>
+      <path d="M -12 148 L 8 136 L 8 160 Z" fill="#1F5B63"/>
+      <path d="M -12 98 L 8 86 L 8 110 Z" fill="#2F8A91"/>
+      <path d="M -10 44 L 6 34 L 6 54 Z" fill="#C96442"/>
+    </svg>
+  </section>
+
+  <!-- 2 · Intro -->
+  <section class="step card" id="intro" data-x="6000" data-y="-9800" data-scale="2">
+    <img class="product" src="assets/pulsation-emergency-service-documentation.png" alt="pulsation emergency service documentation app on a rugged tablet">
+    <div class="about">
+      <div class="kicker">About me</div>
+      <h2>Lothar Schulz</h2>
+      <div class="role">CTO at pulsation IT GmbH</div>
+      <div class="faces">
+        <img class="photo" src="assets/lothar.jpeg" alt="Portrait of Lothar Schulz">
+        <img class="qr" src="assets/qr-lotharschulz-info.png" alt="QR code linking to lotharschulz.info">
+      </div>
+    </div>
+    <div class="links">
+      <a href="https://www.lotharschulz.info" target="_blank">lotharschulz.info</a>
+      <a href="https://www.linkedin.com/in/lotharschulz/" target="_blank">linkedin.com/in/lotharschulz</a>
+      <a href="https://github.com/lotharschulz" target="_blank">github.com/lotharschulz</a>
+      <a href="https://speakerdeck.com/lothar/" target="_blank">speakerdeck.com/lothar</a>
+    </div>
+  </section>
+
+  <!-- 3 · More Code ≠ More Value  (users ring: value) -->
+  <section class="step card" id="more-code" data-x="-2052" data-y="-5638" data-rotate="-20" data-scale="1.1">
+    <div class="kicker">The provocation</div>
+    <h2>More Code ≠ More Value</h2>
+    <p class="muted" style="margin-bottom:34px">AI made writing code fast and cheap. Did it make software more valuable?</p>
+    <div class="cols cols-2 grow">
+      <div>
+        <h3>Action bias</h3>
+        <ul class="clean">
+          <li>Showcase-ready software within seconds → race for the fastest prototype</li>
+          <li>First “wow” effect in the demo wins</li>
+          <li>Behind it: hard-coded happy paths, unvalidated inputs, unthought edge cases — <b>AI slop</b></li>
+        </ul>
+      </div>
+      <div>
+        <h3>What decides if software survives production</h3>
+        <div style="margin-top:12px">
+          <span class="pill">security</span><span class="pill">data protection</span><span class="pill">error handling</span>
+          <span class="pill teal">scalability</span><span class="pill teal">maintainability</span><span class="pill teal">testability</span>
+        </div>
+      </div>
+    </div>
+    <div class="quote">Every unneeded edit is a future security surface, review load, technical and debugging debt.</div>
+  </section>
+
+  <!-- 4 · A New Abstraction -->
+  <section class="step card" id="abstraction" data-x="3000" data-y="-5196" data-rotate="30" data-scale="1.1">
+    <div class="kicker">The thesis</div>
+    <h2>A New Abstraction:<br>Verifying Without Touching</h2>
+    <div class="cols cols-2 grow" style="margin-top:6px">
+      <div>
+        <h3 class="muted">Vibe Coding</h3>
+        <ul class="clean">
+          <li>Prompt → code → demo</li>
+          <li>Measures how <i>much</i> AI is used</li>
+          <li>“Done” = the agent says so</li>
+        </ul>
+      </div>
+      <div>
+        <h3 class="accent">Vibe Engineering</h3>
+        <ul class="clean">
+          <li>LLMs as high-frequency generators whose output is <b>systematically validated</b></li>
+          <li>Automated tests, formal verification, critical reviews: the <b>harness</b></li>
+          <li>Review value — not every line of code</li>
+        </ul>
+      </div>
+    </div>
+    <div class="quote">LLMs deliver radical speed. Engineers provide the framework and structure. <span class="muted mono" style="font-size:26px">agent = model + harness</span></div>
+  </section>
+
+  <!-- 5 · Feedback Loops (deploy ring) -->
+  <section class="step card" id="feedback-loops" data-x="4432" data-y="-781" data-rotate="80" data-scale="1">
+    <div class="kicker">Graphs &amp; feedback loops 101</div>
+    <h2>Feedback Loops</h2>
+    <p class="muted" style="margin-bottom:24px">Close the gap between “the model created some code” and “the code is correct”.</p>
+    <div class="aoc">
+      <div class="box"><b>Connect</b><span>tools &amp; scripts load on startup / setup</span></div>
+      <div class="box act"><b>Act</b><span>edit · run · generate — tools used on the go</span></div>
+      <div class="box obs"><b>Observe</b><span>tests · types · lint · logs — is the codebase acceptable?</span></div>
+      <div class="box cor"><b>Correct</b><span>compare to target · adjust until all green</span></div>
+    </div>
+    <div class="backarrow">↺ &nbsp;iterate until the sensor is green</div>
+    <div class="cols cols-2 grow">
+      <div class="quote">Without a sensor, “done” is only a guess.</div>
+      <div class="quote">A smart graph and a tighter feedback loop beat a smarter model.</div>
+    </div>
+  </section>
+
+  <!-- 6 · Hook lifecycle (CI ring) -->
+  <section class="step card" id="hook-lifecycle" data-x="1275" data-y="2208" data-rotate="150" data-scale="1">
+    <div class="kicker">Claude Code hooks</div>
+    <h2 style="margin-bottom:20px">Hooks in the Lifecycle</h2>
+    <div class="cols grow" style="grid-template-columns: 1.35fr 1fr; gap:44px">
+      <div class="lc session">
+        <div class="lab"><span>Session · once</span><span>SessionStart … SessionEnd</span></div>
+        <div class="row"><span class="ev">Setup</span><span class="arrow">→</span><span class="ev">SessionStart</span></div>
+        <div class="lc turn">
+          <div class="lab"><span>Turn · once per prompt</span><span>× N</span></div>
+          <div class="row"><span class="ev used">UserPromptSubmit</span><span class="ev">UserPromptExpansion</span></div>
+          <div class="lc loop">
+            <div class="lab"><span>Agentic loop · every tool call</span><span>× N</span></div>
+            <div class="row"><span class="ev">PreToolUse</span><span class="arrow">→</span><span class="ev">tool</span><span class="arrow">→</span><span class="ev used">PostToolUse</span></div>
+            <div class="row"><span class="ev">SubagentStart</span><span class="arrow">…</span><span class="ev used">SubagentStop</span></div>
+          </div>
+          <div class="row"><span class="ev used">Stop</span><span class="muted" style="font-size:20px">or</span><span class="ev">StopFailure</span></div>
+        </div>
+        <div class="row"><span class="ev">PreCompact</span><span class="ev">PostCompact</span><span class="arrow">→</span><span class="ev">SessionEnd</span></div>
+      </div>
+      <div>
+        <p style="margin-bottom:20px">Hooks are shell commands Claude Code runs <b>deterministically</b> at defined points — they inspect what the agent produced.</p>
+        <div class="quote" style="font-size:28px; margin-bottom:22px">CLAUDE.md is probabilistic compliance.<br>A hook is a hard gate.</div>
+        <p class="muted" style="font-size:22px"><span class="ev used" style="font-size:16px">■</span> the 4 of 33 events this repo wires</p>
+        <p class="muted mono" style="font-size:18px; margin-top:10px">code.claude.com/docs/en/hooks#hook-lifecycle</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · Turn vs Stop (CI ring) -->
+  <section class="step card" id="turn-vs-stop" data-x="-872" data-y="2396" data-rotate="200" data-scale="1">
+    <div class="kicker">Turns &amp; stops</div>
+    <h2 style="margin-bottom:12px">A turn is a duration.<br>A stop is an event.</h2>
+    <svg width="1432" height="190" viewBox="0 0 1432 190" aria-hidden="true" style="margin:6px 0 10px">
+      <rect x="20" y="70" width="1180" height="46" rx="23" fill="#EEF6F5" stroke="#2F8A91" stroke-width="3"/>
+      <text x="610" y="101" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="20" fill="#1F5B63">turn · agentic loop: tool calls, subagents, tasks</text>
+      <g fill="#C96442">
+        <rect x="250" y="60" width="8" height="66" rx="4"/><rect x="330" y="60" width="8" height="66" rx="4"/>
+        <rect x="900" y="60" width="8" height="66" rx="4"/><rect x="980" y="60" width="8" height="66" rx="4"/>
+      </g>
+      <text x="290" y="48" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="17" fill="#C96442">Pre/PostToolUse × N</text>
+      <circle cx="20" cy="93" r="16" fill="#26324A"/>
+      <text x="20" y="160" text-anchor="start" font-family="JetBrains Mono, monospace" font-size="19" fill="#26324A">UserPromptSubmit</text>
+      <circle cx="1200" cy="93" r="20" fill="#B23B3B"/>
+      <text x="1200" y="160" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="19" fill="#B23B3B">Stop</text>
+      <path d="M 1215 70 C 1330 -10, 1400 150, 1225 118" fill="none" stroke="#B23B3B" stroke-width="4" stroke-dasharray="8 6"/>
+      <text x="1425" y="30" text-anchor="end" font-family="JetBrains Mono, monospace" font-size="18" fill="#B23B3B">exit 2 ↺ keep working</text>
+    </svg>
+    <div class="cols grow" style="grid-template-columns: 1.3fr 1fr; gap:44px">
+      <table class="t">
+        <tr><th>Event</th><th>Exit 2</th></tr>
+        <tr><td><code>Stop</code></td><td>Prevents Claude from stopping, continues the conversation</td></tr>
+        <tr><td><code>SubagentStop</code></td><td>Prevents the subagent from stopping</td></tr>
+        <tr><td><code>PostToolUse</code></td><td>Can’t block — stderr to Claude, the tool already ran</td></tr>
+      </table>
+      <div>
+        <div class="quote" style="font-size:28px; margin-bottom:22px">The Stop event’s superpower is preventing itself.</div>
+        <p style="font-size:23px">Loop guard: Claude Code ends the turn after <b>8</b> consecutive blocks → keep your own <code>MAX_ATTEMPTS</code> below it.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · Inner loops (overview of the whole canvas) -->
+  <section class="step frame" id="inner-loops" data-x="0" data-y="0" data-rotate="360" data-scale="18">
+    <div class="panel" style="left:22px; width:350px">
+      <div class="kicker" style="font-size:17px">Nested feedback loops</div>
+      <h3>Inner loops verify the code.</h3>
+      <h3 class="accent" style="margin-bottom:20px">The outermost loop verifies the value.</h3>
+      <ul class="clean">
+        <li><b>Editor</b> · seconds</li>
+        <li><b>CI</b> · minutes</li>
+        <li><b>Deploy + Operate</b> · hours</li>
+        <li><b>Users</b> · days</li>
+      </ul>
+    </div>
+    <div class="panel" style="right:22px; width:350px">
+      <h3>Quality = Signal × Speed</h3>
+      <p class="muted" style="margin-bottom:14px">Order signals by cost — cheapest fails fast.</p>
+      <div class="tier" style="background:var(--green-soft)"><b>Cheap</b>format · lint · compile · unit tests</div>
+      <div class="tier" style="background:var(--amber-soft)"><b>Moderate</b>RAG source matching · dependency checks</div>
+      <div class="tier" style="background:var(--red-soft)"><b>Expensive</b>multi-agent evals · LLM-as-judge</div>
+      <p class="muted" style="margin-top:14px; font-size:20px">“Red squiggles for agents”: correct at the moment of the mistake, not later in review.</p>
+    </div>
+  </section>
+
+  <!-- 9 · Editor loop (innermost ring) -->
+  <section class="step frame" id="editor-loop" data-x="0" data-y="0" data-rotate="360" data-scale="4">
+    <div class="panel" style="left:26px; width:372px">
+      <div class="kicker" style="font-size:17px">The innermost ring</div>
+      <h3>Editor Loop</h3>
+      <p style="margin-bottom:16px">Seconds-fast feedback: tools from your existing stack, wired into agent lifecycle hooks.</p>
+      <p class="mono" style="font-size:19px; line-height:1.6; background:#F7F1E9; border-radius:14px; padding:12px 14px">edit → format → lint →<br>compile → test → fix<br><span class="accent">↺ repeat until pass</span></p>
+      <p class="muted" style="margin-top:14px; font-size:19px">Format before lint: formatting needs no code understanding, and avoids re-triggering style rules.</p>
+    </div>
+    <div class="panel" style="right:26px; width:372px">
+      <h3>Why the Stop hook?</h3>
+      <p style="margin-bottom:12px">Fires once per turn — checks the <b>finished</b> state. Per-tool-call hooks would run the full check on every edit.</p>
+      <h3 style="margin-top:6px">Why no MCP?</h3>
+      <p style="margin-bottom:14px">Claude natively reads stdout and exit codes. MCP adds a moving part.</p>
+      <div class="quote">Every tool used is like a CLI. That enables feedback with minimal delay.</div>
+    </div>
+  </section>
+
+  <!-- 10 · Idea of verify.sh (greenfield: no flags) -->
+  <section class="step card" id="verify-idea" data-x="-430" data-y="-720" data-rotate="360" data-scale="0.5">
+    <div class="kicker">The idea</div>
+    <h2 style="margin-bottom:18px">One <code style="font-size:.9em">verify.sh</code> — sensors you already have</h2>
+    <div class="cols grow" style="grid-template-columns: 1fr 1.05fr; gap:48px">
+      <div>
+        <p style="margin-bottom:18px">CLI tools you would run <b>without AI</b> as well. Same script for humans, agents, pre-commit and CI.</p>
+        <p class="muted" style="font-size:22px; margin-bottom:10px">My proposal — every team decides what is best for them:</p>
+        <table class="t" style="font-size:21px">
+          <tr><th></th><th>Rust</th><th>TypeScript</th><th>Python</th></tr>
+          <tr><td>format</td><td><code>cargo fmt</code></td><td><code>prettier</code></td><td><code>ruff format</code></td></tr>
+          <tr><td>lint</td><td><code>clippy</code></td><td><code>eslint</code></td><td><code>ruff check</code></td></tr>
+          <tr><td>compile</td><td><code>clippy</code></td><td><code>tsc</code></td><td><code>mypy</code></td></tr>
+          <tr><td>test</td><td><code>cargo test</code></td><td><code>vitest</code></td><td><code>pytest</code></td></tr>
+        </table>
+      </div>
+<pre class="code"><span class="c"># greenfield_word_freq/verify.sh</span>
+<span class="k">set</span> -e   <span class="c"># first failure stops</span>
+
+<span class="s">echo "[1/3] Code formatting"</span>
+cargo fmt --all -- --check
+
+<span class="s">echo "[2/3] Compilation &amp; Linting"</span>
+cargo clippy --all-targets -- -D warnings
+
+<span class="s">echo "[3/3] Tests"</span>
+cargo test --manifest-path Cargo.toml
+
+<span class="ok">echo "✓ All checks passed!"</span></pre>
+    </div>
+  </section>
+  <!-- 11 · Blueprint greenfield -->
+  <section class="step card" id="blueprint-greenfield" data-x="-430" data-y="-240" data-rotate="360" data-scale="0.5">
+    <div class="kicker" style="color:var(--green)">Blueprint · greenfield_word_freq</div>
+    <h2 style="margin-bottom:10px">Greenfield: always run everything</h2>
+    <p class="muted" style="font-size:23px; margin-bottom:22px">No history to protect, no expensive build to avoid. The fingerprint cache skips redundant work.</p>
+    <!-- Rendering of the greenfield mermaid flowchart in README.md (same nodes, edges, classes) -->
+    <svg class="flow" style="flex:none; display:block" width="1432" height="530" viewBox="0 0 1432 530" role="img" aria-label="Greenfield hook flow: edit loop with PostToolUse formatting, Stop and SubagentStop gate with fingerprint cache, retry and give-up">
+      <defs>
+        <marker id="gf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#4A433C"/></marker>
+        <marker id="gf-arrow-dash" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#999"/></marker>
+      </defs>
+      <g font-family="Inter, system-ui, sans-serif" font-size="17" fill="#1A1A1A" text-anchor="middle">
+        <!-- EACH TURN subgraph -->
+        <rect x="250" y="88" width="790" height="282" rx="18" fill="#FBF7F1" stroke="#B9AE9F" stroke-width="2"/>
+        <text x="270" y="114" text-anchor="start" font-family="JetBrains Mono, monospace" font-size="14" font-weight="600" letter-spacing="1.5" fill="#6B625A">EACH TURN</text>
+
+        <rect x="20" y="260" width="180" height="50" rx="25" fill="#c9e4ca" stroke="#4b7a51" stroke-width="2"/>
+        <text x="110" y="291" font-weight="600" fill="#1b3a1e">User prompt</text>
+
+        <polygon points="280,160 302,128 478,128 500,160 478,192 302,192" fill="#fbe8c6" stroke="#c98a2b" stroke-width="2"/>
+        <text x="390" y="157" fill="#4a2e05">PostToolUse</text>
+        <text x="390" y="180" font-family="JetBrains Mono, monospace" font-size="14" fill="#4a2e05">post-edit-fmt.sh</text>
+        <rect x="290" y="250" width="200" height="70" rx="10" fill="#a9c9e3" stroke="#3d6f96" stroke-width="2"/>
+        <text x="390" y="280" font-weight="600" fill="#0d2438">Agent edits a file</text>
+        <text x="390" y="304" font-size="15" fill="#0d2438">(Edit / Write)</text>
+        <rect x="560" y="250" width="180" height="70" rx="10" fill="#e6e6e6" stroke="#6b6b6b" stroke-width="2"/>
+        <text x="650" y="280">agent decides</text>
+        <text x="650" y="304">it is done</text>
+        <rect x="800" y="232" width="220" height="106" rx="10" fill="#f3c6c6" stroke="#b23b3b" stroke-width="2.5"/>
+        <text x="910" y="264" font-weight="600" fill="#4a1010">Stop / SubagentStop</text>
+        <text x="910" y="292" font-family="JetBrains Mono, monospace" font-size="15" fill="#4a1010">stop-verify.sh</text>
+        <text x="910" y="318" font-size="15" fill="#4a1010">cache miss → verify.sh</text>
+
+        <!-- optional notes -->
+        <rect x="280" y="0" width="240" height="62" rx="10" fill="#f5f5f5" stroke="#999" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="400" y="26" font-size="15" fill="#333">always exit 0</text>
+        <text x="400" y="49" font-size="15" fill="#333">never blocks</text>
+        <rect x="1080" y="140" width="340" height="62" rx="10" fill="#f5f5f5" stroke="#999" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="1250" y="166" font-size="15" fill="#333">fingerprint cache hit</text>
+        <text x="1250" y="189" font-size="15" fill="#333">→ skip verify.sh entirely</text>
+        <rect x="1080" y="430" width="340" height="80" rx="10" fill="#f5f5f5" stroke="#999" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="1250" y="462" font-size="15" fill="#333">exit 1 — attempt = MAX_ATTEMPTS = 3</text>
+        <text x="1250" y="487" font-size="15" fill="#333">gate gives up, reports to user</text>
+
+        <rect x="1150" y="262" width="200" height="50" rx="25" fill="#e6e6e6" stroke="#6b6b6b" stroke-width="2"/>
+        <text x="1250" y="293" font-weight="600">Turn ends</text>
+        <text x="1250" y="336" font-size="14" fill="#6B625A">pass, or cache hit</text>
+      </g>
+
+      <!-- solid, numbered edges -->
+      <g fill="none" stroke="#4A433C" stroke-width="2.5" marker-end="url(#gf-arrow)">
+        <path d="M200 285 H286"/>
+        <path d="M360 250 V196"/>
+        <path d="M420 192 V246"/>
+        <path d="M490 285 H556"/>
+        <path d="M740 285 H796"/>
+        <path d="M1020 287 H1146"/>
+        <path d="M910 338 V400 H440 V324"/>
+      </g>
+      <!-- dashed, optional edges -->
+      <g fill="none" stroke="#999" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#gf-arrow-dash)">
+        <path d="M390 128 V66"/>
+        <path d="M1020 255 L1076 180"/>
+        <path d="M1000 338 L1110 426"/>
+      </g>
+      <g font-family="JetBrains Mono, monospace" font-size="15" font-weight="600" fill="#C96442">
+        <text x="243" y="276" text-anchor="middle">1</text>
+        <text x="344" y="226" text-anchor="end">2</text>
+        <text x="434" y="226">3</text>
+        <text x="523" y="276" text-anchor="middle">4</text>
+        <text x="770" y="276" text-anchor="middle">5</text>
+        <text x="1083" y="278" text-anchor="middle">6 · exit 0</text>
+        <text x="460" y="426" font-weight="500" fill="#B23B3B">exit 2 · attempt &lt; MAX_ATTEMPTS = 3 → fix and retry, back to 2</text>
+      </g>
+    </svg>
+    <p class="legend"><i style="background:#c9e4ca"></i>start / end<i style="background:#e6e6e6"></i>agent checkpoint<i style="background:#fbe8c6"></i>per-edit hook<i style="background:#a9c9e3"></i>agent working<i style="background:#f3c6c6"></i>gate<i style="background:#f5f5f5; border:1px dashed #999"></i>optional / short-circuit</p>
+  </section>
+  <!-- 12 · Greenfield example turns -->
+  <section class="step card" id="example-greenfield" data-x="-430" data-y="240" data-rotate="360" data-scale="0.5">
+    <div class="kicker" style="color:var(--green)">Real turns · greenfield_word_freq</div>
+    <h2 style="margin-bottom:20px">Greenfield: retry, then give up</h2>
+    <div class="cols cols-2 grow" style="gap:30px">
+<pre class="code" style="font-size:17.5px"><span class="c">stop-verify.sh · exit 2 → fixed</span>
+<span class="w">Stop hook error:</span> verify.sh failed
+  <span class="w">(attempt 1/3)</span>. Fix the issues
+  below before stopping:
+[2/3] Compilation &amp; Linting
+<span class="e">error: unused variable: `x`</span>
+  --&gt; src/main.rs:204:9
+
+● Junk fn after tests, unused var.
+  Remove it.
+● Update(src/main.rs)
+  Removed 4 lines
+● Bash(cargo fmt … &amp;&amp; cargo clippy)
+  Finished `dev` profile
+<span class="ok">● Clean. Stop.</span></pre>
+<pre class="code" style="font-size:17.5px"><span class="c">stop-verify.sh · exit 1 → give up</span>
+verify.sh failed <span class="w">(attempt 1/3)</span>.
+  Fix the issues below before stopping:
+[2/3] Compilation &amp; Linting
+<span class="e">error: this assertion is always `false`</span>
+  --&gt; tests/cli.rs:22:5
+
+<span class="w">(attempt 2/3)</span> … same error
+<span class="w">(attempt 3/3)</span> … same error
+
+<span class="e">verify.sh still failing after 3
+  consecutive attempts; giving up.</span>
+  Last output: …</pre>
+    </div>
+    <p class="muted" style="font-size:21px; margin-top:16px">Proof by side effect: the green fingerprint file and its timestamp exist only if the hook really ran — not an agent self-report.</p>
+  </section>
+  <!-- 13 · verify.sh with flags (brownfield) -->
+  <section class="step card" id="verify-flags" data-x="430" data-y="-720" data-rotate="360" data-scale="0.5">
+    <div class="kicker">Brownfield · one script, many callers</div>
+    <h2 style="margin-bottom:22px">verify.sh with flags</h2>
+    <div class="cols grow" style="grid-template-columns: 1.25fr 1fr; gap:44px">
+      <table class="t">
+        <tr><th>Flag</th><th>Effect</th></tr>
+        <tr><td><i class="muted">(none)</i></td><td>fmt check · clippy <code>-D warnings</code> · tests</td></tr>
+        <tr><td><code>--full</code></td><td>+ release build</td></tr>
+        <tr><td><code>--fix</code></td><td><code>cargo fmt --all</code> instead of <code>--check</code></td></tr>
+        <tr><td><code>--changed-only</code></td><td>skip if tree clean or no <code>.rs</code> changed; auto <code>--full</code> at ≥ <b>100</b> changed lines</td></tr>
+        <tr><td><code>--no-escalate</code></td><td>never escalate</td></tr>
+        <tr><td><code>--file=&lt;path&gt;</code></td><td>format one file, return early</td></tr>
+      </table>
+      <div>
+        <h3>Who calls what</h3>
+        <div class="files" style="font-size:20px; line-height:1.7">
+          <span class="h">PostToolUse</span>  --file=&lt;edited&gt;<br>
+          <span class="h">SubagentStop</span> --changed-only<br>
+          <span class="d">             --no-escalate</span><br>
+          <span class="h">Stop</span>         --changed-only<br>
+          <span class="h">human</span>        --fix · --full
+        </div>
+        <p class="muted" style="font-size:21px; margin-top:16px">Exit: <code>0</code> pass · <code>1</code> check failed · <code>64</code> bad flag. The gate maps failure to exit 2.</p>
+      </div>
+    </div>
+  </section>
+  <!-- 14 · Blueprint brownfield -->
+  <section class="step card" id="blueprint-brownfield" data-x="430" data-y="-240" data-rotate="360" data-scale="0.5">
+    <div class="kicker">Blueprint · brownfield_word_freq</div>
+    <h2 style="margin-bottom:10px">Brownfield: verify only what changed</h2>
+    <p class="muted" style="font-size:23px; margin-bottom:20px">Full verify on every Stop is too expensive. Gate on real changes, escalate by size.</p>
+    <!-- Rendering of the brownfield mermaid flowchart in README.md (same nodes, edges, classes) -->
+    <svg class="flow" style="flex:none; display:block" width="1432" height="560" viewBox="0 0 1432 560" role="img" aria-label="Brownfield hook flow: prompt snapshot, edit loop with PostToolUse, Stop turn-gate with skips, retry, give-up and SubagentStop path">
+      <defs>
+        <marker id="bf-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#4A433C"/></marker>
+        <marker id="bf-arrow-dash" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#999"/></marker>
+      </defs>
+      <g font-family="Inter, system-ui, sans-serif" font-size="17" fill="#1A1A1A" text-anchor="middle">
+        <!-- EACH TURN subgraph -->
+        <rect x="250" y="88" width="790" height="282" rx="18" fill="#FBF7F1" stroke="#B9AE9F" stroke-width="2"/>
+        <text x="270" y="114" text-anchor="start" font-family="JetBrains Mono, monospace" font-size="14" font-weight="600" letter-spacing="1.5" fill="#6B625A">EACH TURN</text>
+
+        <!-- left column: prompt + snapshot -->
+        <rect x="20" y="110" width="180" height="50" rx="25" fill="#c9e4ca" stroke="#4b7a51" stroke-width="2"/>
+        <text x="110" y="141" font-weight="600" fill="#1b3a1e">User prompt</text>
+        <rect x="20" y="210" width="180" height="80" rx="10" fill="#fbe8c6" stroke="#c98a2b" stroke-width="2"/>
+        <text x="110" y="243" fill="#4a2e05">UserPromptSubmit</text>
+        <text x="110" y="268" font-family="JetBrains Mono, monospace" font-size="14" fill="#4a2e05">prompt-snapshot.sh</text>
+        <rect x="20" y="330" width="180" height="70" rx="10" fill="#f5f5f5" stroke="#999" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="110" y="360" font-size="15" fill="#333">records tree fingerprint</text>
+        <text x="110" y="383" font-size="15" fill="#333">prints nothing</text>
+
+        <!-- inside the turn -->
+        <polygon points="280,160 302,128 478,128 500,160 478,192 302,192" fill="#fbe8c6" stroke="#c98a2b" stroke-width="2"/>
+        <text x="390" y="157" fill="#4a2e05">PostToolUse</text>
+        <text x="390" y="180" font-family="JetBrains Mono, monospace" font-size="14" fill="#4a2e05">post-edit.sh</text>
+        <rect x="290" y="250" width="200" height="70" rx="10" fill="#a9c9e3" stroke="#3d6f96" stroke-width="2"/>
+        <text x="390" y="280" font-weight="600" fill="#0d2438">Agent edits a file</text>
+        <text x="390" y="304" font-size="15" fill="#0d2438">(Edit / Write)</text>
+        <rect x="560" y="250" width="180" height="70" rx="10" fill="#e6e6e6" stroke="#6b6b6b" stroke-width="2"/>
+        <text x="650" y="280">main agent decides</text>
+        <text x="650" y="304">it is done</text>
+        <rect x="800" y="232" width="220" height="106" rx="10" fill="#f3c6c6" stroke="#b23b3b" stroke-width="2.5"/>
+        <text x="910" y="264" font-weight="600" fill="#4a1010">Stop hook</text>
+        <text x="910" y="290" font-family="JetBrains Mono, monospace" font-size="15" fill="#4a1010">turn-gate.sh</text>
+        <text x="910" y="316" font-size="15" fill="#4a1010">if changes → verify.sh</text>
+
+        <!-- optional notes -->
+        <rect x="280" y="0" width="240" height="62" rx="10" fill="#f5f5f5" stroke="#999" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="400" y="26" font-family="JetBrains Mono, monospace" font-size="14" fill="#333">verify.sh --file=, silent</text>
+        <text x="400" y="49" font-size="15" fill="#333">always exit 0</text>
+        <rect x="230" y="432" width="370" height="100" rx="10" fill="#f5f5f5" stroke="#999" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="415" y="462" font-size="15" fill="#333">SubagentStop — if a subagent was used</text>
+        <text x="415" y="487" font-family="JetBrains Mono, monospace" font-size="14" fill="#333">subagent-gate.sh</text>
+        <text x="415" y="512" font-family="JetBrains Mono, monospace" font-size="14" fill="#333">verify.sh --changed-only --no-escalate</text>
+        <rect x="1080" y="100" width="340" height="62" rx="10" fill="#f5f5f5" stroke="#999" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="1250" y="126" font-size="15" fill="#333">turn snapshot unchanged</text>
+        <text x="1250" y="149" font-size="15" fill="#333">→ skip verify.sh</text>
+        <rect x="1080" y="176" width="340" height="62" rx="10" fill="#f5f5f5" stroke="#999" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="1250" y="202" font-size="15" fill="#333">content already proven green</text>
+        <text x="1250" y="225" font-size="15" fill="#333">→ skip verify.sh</text>
+        <rect x="1080" y="440" width="340" height="80" rx="10" fill="#f5f5f5" stroke="#999" stroke-width="2" stroke-dasharray="6 4"/>
+        <text x="1250" y="472" font-size="15" fill="#333">exit 1 — attempt = MAX_ATTEMPTS = 2</text>
+        <text x="1250" y="497" font-size="15" fill="#333">gate gives up, reports to user</text>
+
+        <!-- turn ends -->
+        <rect x="1150" y="262" width="200" height="50" rx="25" fill="#e6e6e6" stroke="#6b6b6b" stroke-width="2"/>
+        <text x="1250" y="293" font-weight="600">Turn ends</text>
+        <text x="1250" y="336" font-size="14" fill="#6B625A">pass, or a skip above</text>
+      </g>
+
+      <!-- solid, numbered edges -->
+      <g fill="none" stroke="#4A433C" stroke-width="2.5" marker-end="url(#bf-arrow)">
+        <path d="M110 160 V206"/>
+        <path d="M200 262 L286 280"/>
+        <path d="M360 250 V196"/>
+        <path d="M420 192 V246"/>
+        <path d="M490 285 H556"/>
+        <path d="M740 285 H796"/>
+        <path d="M1020 287 H1146"/>
+        <path d="M910 338 V388 H460 V324"/>
+        <path d="M380 432 V324"/>
+      </g>
+      <!-- dashed, optional edges -->
+      <g fill="none" stroke="#999" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#bf-arrow-dash)">
+        <path d="M110 290 V326"/>
+        <path d="M390 128 V66"/>
+        <path d="M330 320 V428"/>
+        <path d="M1020 250 L1076 136"/>
+        <path d="M1020 260 L1076 210"/>
+        <path d="M1000 338 L1110 436"/>
+      </g>
+      <g font-family="JetBrains Mono, monospace" font-size="15" font-weight="600" fill="#C96442">
+        <text x="122" y="190">1</text>
+        <text x="236" y="258">2</text>
+        <text x="344" y="226" text-anchor="end">3</text>
+        <text x="434" y="226">4</text>
+        <text x="523" y="276" text-anchor="middle">5</text>
+        <text x="770" y="276" text-anchor="middle">6</text>
+        <text x="1083" y="278" text-anchor="middle">7 · exit 0</text>
+        <text x="392" y="414" font-weight="500" fill="#4A433C">exit 2 · first send-back only</text>
+        <text x="660" y="414" font-weight="500" fill="#B23B3B">exit 2 · attempt &lt; 2 → fix, back to 3</text>
+      </g>
+    </svg>
+    <p class="legend"><i style="background:#c9e4ca"></i>start / end<i style="background:#e6e6e6"></i>agent checkpoint<i style="background:#fbe8c6"></i>per-edit hook<i style="background:#a9c9e3"></i>agent working<i style="background:#f3c6c6"></i>gate<i style="background:#f5f5f5; border:1px dashed #999"></i>optional / short-circuit</p>
+  </section>
+  <!-- 15 · Brownfield example turns -->
+  <section class="step card" id="example-brownfield" data-x="430" data-y="240" data-rotate="360" data-scale="0.5">
+    <div class="kicker">Real turns · brownfield_word_freq</div>
+    <h2 style="margin-bottom:20px">Brownfield: skip, retry, give up</h2>
+    <div class="cols cols-2 grow" style="gap:30px">
+<pre class="code" style="font-size:17.5px"><span class="c">$ cat .claude/gate/gate.log</span>
+turn-gate fired: event=Stop agent=main
+<span class="ok">verify passed</span>
+turn-gate fired: event=Stop agent=main
+<span class="ok">no changes this turn — skipped</span>
+turn-gate fired: event=Stop agent=main
+<span class="w">Validation failed (attempt 1/2).</span>
+  Fix these before finishing:
+<span class="ok">✓ format (cargo fmt --all -- --check)</span>
+<span class="e">✗ lint (cargo clippy --all-targets
+       -- -D warnings)</span>
+<span class="e">error: unused variable: `x`</span>
+<span class="e">error: items after a test module</span>
+<span class="ok">✓ tests (cargo test)</span></pre>
+<pre class="code" style="font-size:17.5px"><span class="c">turn-gate.sh · exit 1 → give up</span>
+<span class="w">Stop hook error:</span> Validation failed
+  <span class="w">(attempt 1/2)</span>. Fix these …
+<span class="e">error: this assertion is always `false`</span>
+  --&gt; tests/cli.rs:22:5
+<span class="e">test prints_top_words_for_file_argument
+  ... FAILED</span>
+<span class="w">(attempt 2/2)</span> … same 3 failures
+
+<span class="e">Stop hook error: Still failing after
+  2 attempts — stopping to avoid a
+  loop.</span> Last output: …</pre>
+    </div>
+    <p class="muted" style="font-size:21px; margin-top:16px"><code>.claude/gate/gate.log</code>: audit trail of every gate run — including silent skips that leave nothing in the transcript.</p>
+  </section>
+  <!-- 16 · Recap: greenfield vs brownfield side by side -->
+  <section class="step card" id="green-brown" data-x="0" data-y="720" data-rotate="360" data-scale="0.5">
+    <div class="kicker">Recap · same code, two gates</div>
+    <h2 style="margin-bottom:18px">verify.sh in Greenfield &amp; Brownfield</h2>
+    <table class="t grow" style="font-size:23px">
+      <tr><th></th><th style="color:var(--green)">Greenfield</th><th style="color:var(--accent)">Brownfield</th></tr>
+      <tr><td>Situation</td><td>no history, cheap full check</td><td>real history, expensive check, standing lint debt</td></tr>
+      <tr><td>Hooks wired</td><td>2 — <code>PostToolUse</code>, <code>Stop</code>+<code>SubagentStop</code> share one script</td><td>4 — <code>UserPromptSubmit</code>, <code>PostToolUse</code>, <code>SubagentStop</code>, <code>Stop</code></td></tr>
+      <tr><td>verify.sh</td><td>fixed 3 steps</td><td>flag-driven</td></tr>
+      <tr><td>Scope per Stop</td><td>always the whole crate</td><td><code>--changed-only</code>, escalates past 100 lines</td></tr>
+      <tr><td>Skips</td><td>1 — fingerprint cache</td><td>2 — turn snapshot + verdict cache</td></tr>
+      <tr><td>MAX_ATTEMPTS</td><td>3</td><td>2</td></tr>
+      <tr><td>Subagents</td><td>same script &amp; budget</td><td>own lean check, sent back at most once</td></tr>
+    </table>
+    <p class="muted" style="font-size:21px; margin-top:12px">Shared: fingerprint = <code>rustc --version</code> + hash of <code>src/</code> <code>tests/</code> <code>Cargo.toml</code> <code>verify.sh</code> · exit contract <code>0</code> pass · <code>2</code> retry · <code>1</code> give up</p>
+  </section>
+
+  <!-- 17 · Conclusion (zoom out to everything) -->
+  <section class="step frame" id="conclusion" data-x="0" data-y="-700" data-rotate="360" data-scale="25">
+    <div class="panel" style="left:24px; width:445px">
+      <div class="kicker" style="font-size:17px">Conclusion</div>
+      <h3 style="font-size:34px">Code is cheap.<br><span class="accent">Verified software isn’t.</span></h3>
+      <ol style="margin-top:14px">
+        <li>Reuse the CLI tools you already trust as <b>sensors</b></li>
+        <li>One <code>verify.sh</code> for humans, agents, pre-commit, CI</li>
+        <li><code>Stop</code> hook = hard gate with a <b>bounded</b> retry budget</li>
+        <li>Greenfield: run everything + cache<br>Brownfield: change-scoped, escalate by size</li>
+      </ol>
+    </div>
+    <div class="panel" style="right:24px; width:445px">
+      <h3>Monday morning</h3>
+      <ol>
+        <li>Decide: greenfield or brownfield</li>
+        <li>Identify your loops</li>
+        <li>Start with the innermost one: the editor loop</li>
+        <li>Use something like <code>verify.sh</code></li>
+        <li>Wire it into your Claude Code hooks</li>
+      </ol>
+      <p class="mono" style="font-size:17px; margin-top:16px; line-height:1.5">github.com/lotharschulz/<br>InnerLoopGreenAndBrownfield</p>
+      <div style="display:flex; align-items:center; gap:16px; margin-top:16px">
+        <img src="assets/qr-lotharschulz-info.png" alt="QR code linking to lotharschulz.info" style="width:96px; height:96px; image-rendering:pixelated; border-radius:8px">
+        <div><b style="font-family:var(--font-head); font-size:28px">Thank you!</b><br><span class="muted" style="font-size:19px">Questions?</span></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div id="hud"><div id="progress"></div></div>
+<div id="counter"></div>
+<div id="hint">→ / space next · ← back · O overview · F fullscreen · click any slide</div>
+
+<script>
+(() => {
+  const SLIDE_WIDTH = 1600;
+  const SLIDE_HEIGHT = 900;
+  const MIN_DURATION_MS = 900;
+  const MAX_DURATION_MS = 2400;
+  const SWIPE_THRESHOLD_PX = 50;
+  const HINT_VISIBLE_MS = 6000;
+  // Beyond this zoom ratio the pan follows the scale; below it a long pan gets a zoom-out "hop".
+  const ZOOM_RATIO_FOR_SCALED_PAN = 3;
+
+  const camera = document.getElementById('camera');
+  const steps = [...document.querySelectorAll('.step')];
+  const progress = document.getElementById('progress');
+  const counter = document.getElementById('counter');
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const placementOf = (el) => ({
+    x: Number(el.dataset.x || 0),
+    y: Number(el.dataset.y || 0),
+    s: Number(el.dataset.scale || 1),
+    r: Number(el.dataset.rotate || 0),
+  });
+
+  steps.forEach((el) => {
+    const p = placementOf(el);
+    el.style.transform = `translate(${p.x}px, ${p.y}px) rotate(${p.r}deg) scale(${p.s})`;
+  });
+
+  let current = 0;
+  let cam = placementOf(steps[0]);
+  let animationFrame = null;
+  let overview = false;
+
+  const viewportScale = () => Math.min(innerWidth / SLIDE_WIDTH, innerHeight / SLIDE_HEIGHT);
+  const render = (c) => {
+    camera.style.transform = `scale(${viewportScale() / c.s}) rotate(${-c.r}deg) translate(${-c.x}px, ${-c.y}px)`;
+  };
+  const lerp = (a, b, t) => a + (b - a) * t;
+  const ease = (t) => (t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+
+  function flyTo(target) {
+    cancelAnimationFrame(animationFrame);
+    const from = { ...cam };
+    const zoomRatio = Math.max(from.s, target.s) / Math.min(from.s, target.s);
+    const distance = Math.hypot(target.x - from.x, target.y - from.y);
+    const hop = zoomRatio < ZOOM_RATIO_FOR_SCALED_PAN
+      ? Math.log(1 + distance / (Math.max(from.s, target.s) * SLIDE_WIDTH)) * 0.9
+      : 0;
+    const duration = reducedMotion ? 0 : Math.min(MAX_DURATION_MS,
+      MIN_DURATION_MS + 350 * Math.log(zoomRatio) + 500 * hop + 0.8 * Math.abs(target.r - from.r));
+    const start = performance.now();
+
+    const frame = (now) => {
+      const t = duration === 0 ? 1 : Math.min(1, (now - start) / duration);
+      const e = ease(t);
+      const s = Math.exp(lerp(Math.log(from.s), Math.log(target.s), e) + hop * Math.sin(Math.PI * e));
+      // Pan proportional to scale: move while the view is wide, not while zoomed in.
+      const pan = hop === 0 && target.s !== from.s ? (s - from.s) / (target.s - from.s) : e;
+      cam = {
+        x: lerp(from.x, target.x, pan),
+        y: lerp(from.y, target.y, pan),
+        s,
+        r: lerp(from.r, target.r, e),
+      };
+      render(cam);
+      if (t < 1) animationFrame = requestAnimationFrame(frame);
+    };
+    animationFrame = requestAnimationFrame(frame);
+  }
+
+  function markActive() {
+    steps.forEach((el, i) => el.classList.toggle('active', i === current && !overview));
+    document.body.classList.toggle('frame-active', overview || steps[current].classList.contains('frame'));
+    progress.style.width = `${(current / (steps.length - 1)) * 100}%`;
+    counter.textContent = `${current + 1} / ${steps.length}`;
+  }
+
+  function goTo(index, animate = true) {
+    current = Math.max(0, Math.min(steps.length - 1, index));
+    overview = false;
+    const target = placementOf(steps[current]);
+    if (animate) flyTo(target); else { cam = target; render(cam); }
+    markActive();
+    history.replaceState(null, '', `#${steps[current].id}`);
+  }
+
+  function toggleOverview() {
+    if (overview) { goTo(current); return; }
+    overview = true;
+    const whole = placementOf(document.getElementById('conclusion'));
+    whole.r = Math.round(cam.r / 360) * 360;
+    flyTo(whole);
+    markActive();
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
+    switch (event.key) {
+      case 'ArrowRight': case 'ArrowDown': case 'PageDown': case ' ': case 'Enter':
+        event.preventDefault(); goTo(current + 1); break;
+      case 'ArrowLeft': case 'ArrowUp': case 'PageUp': case 'Backspace':
+        event.preventDefault(); goTo(current - 1); break;
+      case 'Home': goTo(0); break;
+      case 'End': goTo(steps.length - 1); break;
+      case 'o': case 'O': toggleOverview(); break;
+      case 'f': case 'F':
+        if (document.fullscreenElement) document.exitFullscreen();
+        else document.documentElement.requestFullscreen?.();
+        break;
+    }
+  });
+
+  steps.forEach((el, i) => el.addEventListener('click', (event) => {
+    if (event.target.closest('a')) return;
+    if (i !== current || overview) goTo(i);
+  }));
+
+  let touchStartX = null;
+  addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  addEventListener('touchend', (e) => {
+    if (touchStartX === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    touchStartX = null;
+    if (Math.abs(dx) < SWIPE_THRESHOLD_PX) return;
+    goTo(current + (dx < 0 ? 1 : -1));
+  });
+
+  addEventListener('resize', () => render(cam));
+  addEventListener('hashchange', () => {
+    const index = steps.findIndex((el) => `#${el.id}` === location.hash);
+    if (index >= 0 && index !== current) goTo(index);
+  });
+
+  const initial = steps.findIndex((el) => `#${el.id}` === location.hash);
+  goTo(initial >= 0 ? initial : 0, false);
+  setTimeout(() => document.getElementById('hint').classList.add('gone'), HINT_VISIBLE_MS);
+})();
+</script>
+</body>
+</html>

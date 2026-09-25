@@ -313,7 +313,7 @@ before the main agent's full gate runs.
 
 | | Greenfield | Brownfield |
 |---|---|---|
-| Hooks wired | 2 (`PostToolUse`, `Stop`+`SubagentStop` share one script) | 4 (`UserPromptSubmit`, `PostToolUse`, `SubagentStop`, `Stop` each have their own) |
+| Hooks wired | 3 (`PostToolUse`, `Stop`+`SubagentStop` share one script) | 4 (`UserPromptSubmit`, `PostToolUse`, `SubagentStop`, `Stop` each have their own) |
 | `verify.sh` shape | fixed 3-step script | flag-driven: `--full` `--fix` `--changed-only` `--no-escalate` `--file=` |
 | Scope per Stop | always the whole crate | `--changed-only`, escalates past `THRESHOLD` lines |
 | Skip conditions | 1 (fingerprint cache) | 2 (turn snapshot + fingerprint cache) |

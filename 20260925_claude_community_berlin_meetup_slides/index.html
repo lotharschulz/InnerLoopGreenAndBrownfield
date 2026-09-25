@@ -859,7 +859,7 @@ turn-gate fired: event=Stop agent=main
     <table class="t grow" style="font-size:23px">
       <tr><th></th><th style="color:var(--green)">Greenfield</th><th style="color:var(--accent)">Brownfield</th></tr>
       <tr><td>Situation</td><td>no history, cheap full check</td><td>real history, expensive check, standing lint debt</td></tr>
-      <tr><td>Hooks wired</td><td>2 — <code>PostToolUse</code>, <code>Stop</code>+<code>SubagentStop</code> share one script</td><td>4 — <code>UserPromptSubmit</code>, <code>PostToolUse</code>, <code>SubagentStop</code>, <code>Stop</code></td></tr>
+      <tr><td>Hooks wired</td><td>3 — <code>PostToolUse</code>, <code>Stop</code>+<code>SubagentStop</code> share one script</td><td>4 — <code>UserPromptSubmit</code>, <code>PostToolUse</code>, <code>SubagentStop</code>, <code>Stop</code></td></tr>
       <tr><td>verify.sh</td><td>fixed 3 steps</td><td>flag-driven</td></tr>
       <tr><td>Scope per Stop</td><td>always the whole crate</td><td><code>--changed-only</code>, escalates past 100 lines</td></tr>
       <tr><td>Skips</td><td>1 — fingerprint cache</td><td>2 — turn snapshot + verdict cache</td></tr>
@@ -890,7 +890,7 @@ turn-gate fired: event=Stop agent=main
         <li>Use something like <code>verify.sh</code></li>
         <li>Wire it into your Claude Code hooks</li>
       </ol>
-      <p class="mono" style="font-size:17px; margin-top:16px; line-height:1.5"><!-- <a href="https://github.com/lotharschulz/InnerLoopGreenAndBrownfield" target="_blank">github.com/lotharschulz/<br>InnerLoopGreenAndBrownfield</a> --></p>
+      <p class="mono" style="font-size:17px; margin-top:16px; line-height:1.5"><a href="https://github.com/lotharschulz/InnerLoopGreenAndBrownfield" target="_blank">github.com/lotharschulz/<br>InnerLoopGreenAndBrownfield</a></p>
       <div style="display:flex; align-items:center; gap:16px; margin-top:16px">
         <img src="assets/20260925_claude_community_berlin_meetup_slides.png" alt="QR code linking these slides" style="width:96px; height:96px; image-rendering:pixelated; border-radius:8px">
         <div><b style="font-family:var(--font-head); font-size:28px">Thank you!</b><br><span class="muted" style="font-size:19px">Questions?</span></div>

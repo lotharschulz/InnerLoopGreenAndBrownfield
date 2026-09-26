@@ -224,6 +224,13 @@
     transition: opacity 1s ease;
   }
   #hint.gone { opacity: 0; }
+  #motion {
+    position: fixed; left: 18px; bottom: 8px; min-height: 44px; padding: 0 16px;
+    font: 500 14px/1 var(--font-mono); color: var(--muted);
+    background: rgba(255, 253, 249, .9); border: 1px solid var(--line); border-radius: 999px;
+    cursor: pointer;
+  }
+  #motion:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
   @media (max-width: 640px) {
     #hint { font-size: 11px; white-space: nowrap; }
   }
@@ -902,6 +909,7 @@ turn-gate fired: event=Stop agent=main
 
 <div id="hud"><div id="progress"></div></div>
 <div id="counter"></div>
+<button id="motion" type="button" aria-pressed="true">motion: on</button>
 <div id="hint">→ / space next · ← back · O overview · F fullscreen · click any slide</div>
 
 <script>
@@ -914,12 +922,34 @@ turn-gate fired: event=Stop agent=main
   const HINT_VISIBLE_MS = 6000;
   // Beyond this zoom ratio the pan follows the scale; below it a long pan gets a zoom-out "hop".
   const ZOOM_RATIO_FOR_SCALED_PAN = 3;
+  // Slow devices (phones repainting the huge rings SVG) would otherwise finish the flight in 1–2 frames.
+  const MAX_FRAME_STEP_MS = 50;
+  const MOTION_STORAGE_KEY = 'slides-motion';
 
   const camera = document.getElementById('camera');
   const steps = [...document.querySelectorAll('.step')];
   const progress = document.getElementById('progress');
   const counter = document.getElementById('counter');
+  const motionButton = document.getElementById('motion');
   const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const readStoredMotion = () => {
+    try { return localStorage.getItem(MOTION_STORAGE_KEY); } catch { return null; }
+  };
+  const storedMotion = readStoredMotion();
+  let motionEnabled = storedMotion === null ? !reducedMotion : storedMotion === 'on';
+
+  const renderMotionButton = () => {
+    motionButton.textContent = `motion: ${motionEnabled ? 'on' : 'off'}`;
+    motionButton.setAttribute('aria-pressed', String(motionEnabled));
+  };
+  renderMotionButton();
+  motionButton.addEventListener('click', (event) => {
+    event.stopPropagation();
+    motionEnabled = !motionEnabled;
+    try { localStorage.setItem(MOTION_STORAGE_KEY, motionEnabled ? 'on' : 'off'); } catch { /* private mode: keep in memory only */ }
+    renderMotionButton();
+  });
 
   const placementOf = (el) => ({
     x: Number(el.dataset.x || 0),
@@ -953,12 +983,15 @@ turn-gate fired: event=Stop agent=main
     const hop = zoomRatio < ZOOM_RATIO_FOR_SCALED_PAN
       ? Math.log(1 + distance / (Math.max(from.s, target.s) * SLIDE_WIDTH)) * 0.9
       : 0;
-    const duration = reducedMotion ? 0 : Math.min(MAX_DURATION_MS,
-      MIN_DURATION_MS + 350 * Math.log(zoomRatio) + 500 * hop + 0.8 * Math.abs(target.r - from.r));
-    const start = performance.now();
+    const duration = motionEnabled ? Math.min(MAX_DURATION_MS,
+      MIN_DURATION_MS + 350 * Math.log(zoomRatio) + 500 * hop + 0.8 * Math.abs(target.r - from.r)) : 0;
+    let last = performance.now();
+    let elapsed = 0;
 
     const frame = (now) => {
-      const t = duration === 0 ? 1 : Math.min(1, (now - start) / duration);
+      elapsed += Math.min(Math.max(0, now - last), MAX_FRAME_STEP_MS);
+      last = now;
+      const t = duration === 0 ? 1 : Math.min(1, elapsed / duration);
       const e = ease(t);
       const s = Math.exp(lerp(Math.log(from.s), Math.log(target.s), e) + hop * Math.sin(Math.PI * e));
       // Pan proportional to scale: move while the view is wide, not while zoomed in.

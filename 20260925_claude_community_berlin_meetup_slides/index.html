@@ -937,7 +937,7 @@ turn-gate fired: event=Stop agent=main
     try { return localStorage.getItem(MOTION_STORAGE_KEY); } catch { return null; }
   };
   const storedMotion = readStoredMotion();
-  let motionEnabled = storedMotion === null ? !reducedMotion : storedMotion === 'on';
+  let motionEnabled = storedMotion !== 'on' && storedMotion !== null ? false : true;
 
   const renderMotionButton = () => {
     motionButton.textContent = `motion: ${motionEnabled ? 'on' : 'off'}`;

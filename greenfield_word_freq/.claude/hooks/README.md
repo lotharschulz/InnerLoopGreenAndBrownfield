@@ -5,6 +5,10 @@ a subagent's work gets exactly the same check, and the same retry budget, as the
 agent's). `post-edit-fmt.sh` runs on `PostToolUse` (Edit|Write) and only formats the
 edited file; it always exits 0 and never blocks.
 
+**Strict mode:** both hooks and `verify.sh` run with `set -euo pipefail` and
+`IFS=$'\n\t'`. `post-edit-fmt.sh` falls back to an empty path (`|| file=""`) when `jq`
+cannot parse its input, so `-e` never breaks its always-exit-0 promise.
+
 **Exit codes:** `0` verification passed or cache hit (agent may stop) · `2` blocking,
 fix and retry — stderr is what the agent sees · `1` gave up after `MAX_ATTEMPTS=3`
 consecutive failures, shown to the user rather than to the agent.

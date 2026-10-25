@@ -7,7 +7,8 @@
 #   0 -> verification passed, or cache hit; agent may stop
 #   2 -> blocking: agent receives stderr as feedback and must continue fixing
 #   1 -> non-blocking error shown to the user (used when giving up after MAX_ATTEMPTS)
-set -e
+set -euo pipefail
+IFS=$'\n\t'
 
 MAX_ATTEMPTS=3
 MAX_OUTPUT_LINES=150
@@ -18,7 +19,7 @@ input=$(cat)
 # falls back to a shared "unknown" slot — degraded, but never a hard failure.
 field() {
   if command -v jq >/dev/null 2>&1; then
-    printf '%s' "$input" | jq -r "$1 // empty"
+    printf '%s' "$input" | jq -r "$1 // empty" || true
   fi
 }
 session=$(field '.session_id');    : "${session:=unknown}"

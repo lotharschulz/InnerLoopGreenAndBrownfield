@@ -9,13 +9,14 @@
 # call, which would void the cache. Formatting one file is ~50ms. What it buys is that
 # `cargo fmt --check` failures stop being something stop-verify.sh ever has to send the
 # agent back for.
-set -uo pipefail
+set -euo pipefail
+IFS=$'\n\t'
 
 input=$(cat)
 
-# Extract the edited file's path. Fail open if jq is missing.
+# Extract the edited file's path. Fail open if jq is missing or the input is unparsable.
 if command -v jq >/dev/null 2>&1; then
-  file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty')
+  file=$(printf '%s' "$input" | jq -r '.tool_input.file_path // empty') || file=""
 else
   file=""
 fi

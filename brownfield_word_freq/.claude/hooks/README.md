@@ -16,6 +16,12 @@ verify pass expensive enough to need a change-scoped fast path (`verify.sh
 `turn-gate.sh`'s verdict cache (`bash .claude/hooks/fingerprint-check.sh`). Keep it
 green whenever `verdict_fingerprint` or `repo`/cwd handling in `turn-gate.sh` changes.
 
+**Strict mode:** every hook, `fingerprint-check.sh` and `verify.sh` run with
+`set -euo pipefail` and `IFS=$'\n\t'`. Under `-e`, `post-edit.sh` and `turn-gate.sh`'s
+`field()` tolerate a `jq` parse failure (`|| file=""`, `|| true`), so the always-exit-0
+and fall-back-to-defaults promises still hold. `verify.sh` joins the failed step names
+with an explicit `IFS=' '`, because `"${failures[*]}"` would otherwise join on newlines.
+
 ## Exit codes
 
 `post-edit.sh` and `prompt-snapshot.sh` always exit `0` — they auto-fix or record

@@ -13,11 +13,12 @@
 # hash covered the sibling's sources while claiming to describe the gated crate. The
 # gate then answered "content already proven green" for a crate it had never hashed, and
 # let the agent stop on broken code. Case 3 below is that scenario.
-set -uo pipefail
+set -euo pipefail
+IFS=$'\n\t'
 
 HOOK_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HOOK_DIR/../.." && pwd)"
-SIBLING="$(cd "$REPO/../greenfield_word_freq" 2>/dev/null && pwd)"
+SIBLING="$(cd "$REPO/../greenfield_word_freq" 2>/dev/null && pwd)" || SIBLING=""
 GATE="$REPO/.claude/gate"
 SESSION="fingerprint-check"
 GREEN="$GATE/green-fingerprint.txt"
@@ -42,10 +43,9 @@ trap restore EXIT INT TERM
 # Drive the real hook: $2 is the cwd to run it from, so cwd and $CLAUDE_PROJECT_DIR can
 # be made to disagree — the whole point of the check.
 run_gate() {
-  local label="$1" cwd="$2"
+  local label="$1" cwd="$2" status=0
   printf '{"session_id":"%s","hook_event_name":"Stop"}' "$SESSION" \
-    | (cd "$cwd" && CLAUDE_PROJECT_DIR="$REPO" bash "$HOOK_DIR/turn-gate.sh" 2>&1)
-  local status=$?
+    | (cd "$cwd" && CLAUDE_PROJECT_DIR="$REPO" bash "$HOOK_DIR/turn-gate.sh" 2>&1) || status=$?
   echo "    [$label] exit=$status"
   return $status
 }
@@ -68,19 +68,19 @@ rm -rf "$GATE"; mkdir -p "$GATE"
 echo "forced-mismatch" > "$GATE/${SESSION}-snapshot.txt"
 
 echo "Case 1: cwd = the gated repo — populates the cache"
-run_gate case1 "$REPO" > /dev/null 2>&1
-first_hash="$(cat "$GREEN" 2>/dev/null)"
+run_gate case1 "$REPO" > /dev/null 2>&1 || true
+first_hash="$(cat "$GREEN" 2>/dev/null)" || first_hash=""
 check "green fingerprint was written" "yes" "$([ -n "$first_hash" ] && echo yes || echo no)"
 
 echo "Case 2: cwd = sibling crate, same gated repo — same key, so a cache hit"
-out="$(run_gate case2 "$SIBLING" 2>&1)"
+out="$(run_gate case2 "$SIBLING" 2>&1)" || true
 check "reported a cache hit" "yes" \
   "$(grep -q 'already proven green' <<< "$out" && echo yes || echo no)"
 check "cache key unchanged by cwd" "$first_hash" "$(cat "$GREEN" 2>/dev/null)"
 
 echo "Case 3: gated repo broken, cwd = sibling — the regression"
 printf '\nfn regression_check_broken( {\n' >> "$REPO/src/main.rs"
-out="$(run_gate case3 "$SIBLING" 2>&1)"
+out="$(run_gate case3 "$SIBLING" 2>&1)" || true
 check "did NOT claim green for a broken repo" "no" \
   "$(grep -q 'already proven green' <<< "$out" && echo yes || echo no)"
 check "blocked the agent (exit 2)" "2" "$(grep -o 'exit=[0-9]*' <<< "$out" | tail -1 | cut -d= -f2)"

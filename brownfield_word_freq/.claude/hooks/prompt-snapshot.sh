@@ -4,7 +4,8 @@
 # whether THIS turn changed anything, rather than just checking if the tree is dirty.
 #
 # Prints nothing on purpose: on UserPromptSubmit, stdout is injected into Claude's context.
-set -uo pipefail
+set -euo pipefail
+IFS=$'\n\t'
 
 input=$(cat)
 

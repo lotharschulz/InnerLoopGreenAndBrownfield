@@ -9,7 +9,8 @@
 # loop. NOTE: it does NOT bound the "work loop" where an agent never tries to stop
 # (edit A breaks B, fix B re-breaks A). Only the harness (max-turns + wall-clock
 # timeout) bounds that — set those on whatever launches the orchestrator.
-set -uo pipefail
+set -euo pipefail
+IFS=$'\n\t'
 
 MAX_ATTEMPTS=2   # keep this BELOW the platform's consecutive-stop-block cap (default ~8)
                  # so this budget is the binding constraint, not the platform's.
@@ -20,7 +21,7 @@ input=$(cat)
 
 field() {
   if command -v jq >/dev/null 2>&1; then
-    printf '%s' "$input" | jq -r "$1 // empty"
+    printf '%s' "$input" | jq -r "$1 // empty" || true
   fi
 }
 session=$(field '.session_id');       : "${session:=unknown}"

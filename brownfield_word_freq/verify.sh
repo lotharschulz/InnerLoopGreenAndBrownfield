@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-set -uo pipefail
+set -euo pipefail
+IFS=$'\n\t'
 
 # verify.sh — project verification gate. Committed to the repo (project-specific):
 # it drives this crate's cargo fmt/clippy/test commands.
@@ -66,7 +67,7 @@ if [ "$CHANGED_ONLY" -eq 1 ]; then
     exit 0
   fi
   if [ "$NO_ESCALATE" -eq 0 ]; then
-    changed=$(git diff HEAD --numstat | awk '{s+=$1+$2} END {print s+0}')
+    changed=$(git diff HEAD --numstat | awk '{s+=$1+$2} END {print s+0}') || true   # no HEAD yet: git fails, awk still prints 0
     if [ "$changed" -ge "$THRESHOLD" ]; then
       echo "Large change ($changed lines) — running the full pass."
       FULL=1
@@ -131,13 +132,15 @@ fi
 # Print the FIRST failure last: whatever tails this output (the gate takes the last
 # MAX_OUTPUT_LINES) then sees the failure that actually started the cascade, not the
 # last step that happened to run.
-echo "Failed: ${failures[*]}"
+# "${failures[*]}" joins on the first character of IFS, which is a newline here.
+failed_summary=$(IFS=' '; echo "${failures[*]}")
+echo "Failed: $failed_summary"
 echo ""
 echo "=== First failure: $first_failure_name ==="
 printf '%s\n' "$first_failure_output" | tail -n 100
 if [ -z "${CALLED_BY_GATE:-}" ]; then
   {
-    echo "Failed: ${failures[*]}"
+    echo "Failed: $failed_summary"
     echo ""
     echo "=== First failure: $first_failure_name ==="
     printf '%s\n' "$first_failure_output" | tail -n 100

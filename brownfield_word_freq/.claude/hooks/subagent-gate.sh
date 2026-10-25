@@ -9,7 +9,8 @@
 # Loop safety comes from `stop_hook_active`, which Claude Code sets to true whenever an
 # agent is only still running because a stop hook sent it back. Never blocking twice is
 # enough here — the expensive, stateful budget logic belongs in turn-gate.sh alone.
-set -uo pipefail
+set -euo pipefail
+IFS=$'\n\t'
 
 input=$(cat)
 

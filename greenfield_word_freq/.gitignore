@@ -1,3 +1,5 @@
 # Hook runtime state: audit log, per-session retry counters, verdict cache.
 # Must stay ignored — see .claude/hooks/README.md.
 .claude/gate/
+.claude/autoharness/
+.claude/skills/

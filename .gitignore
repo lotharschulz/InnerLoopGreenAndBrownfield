@@ -2,3 +2,4 @@
 target/
 .lean-ctx/
 tmp/
+/.claude/

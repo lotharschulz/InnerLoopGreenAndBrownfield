@@ -174,7 +174,7 @@ enough to skip redundant work (a revert, a question-only turn).
 
 # Brownfield (approach 2)
 
-A verify script run would be to expensive to run it for every stop.
+A verify script run would be too expensive to run it for every stop.
 The gate filters for prompts that actually changed the code base. The expensive path is triggered only when the change is large.
 
 ```mermaid
@@ -305,7 +305,7 @@ the repo has enough history that "what changed this turn" is a meaningful questi
 or subagents fan out edits across a crate and each one needs its own cheap checkpoint
 before the main agent's full gate runs.
 
-**Note**: the code in [`brownfield_word_freq`](./brownfield_word_freq) repository is not brownfield, however the hook setups is made for brownfield situaions.
+**Note**: the code in [`brownfield_word_freq`](./brownfield_word_freq) repository is not brownfield, however the hook setups is made for brownfield situations.
 
 ---
 
@@ -373,7 +373,7 @@ exercises the retry budget and the give-up path.
 
 ---
 
-# Pre-commit hook
+# Git pre-commit hook
 
 A third, independent gate — plain git, not a Claude Code hook, so it fires for a human
 `git commit` too, not just an agent's Stop.
@@ -388,7 +388,7 @@ git config core.hooksPath .githooks
 It runs 
 ```cargo test --manifest-path Cargo.toml && cargo fmt --all -- --check && cargo clippy``` 
 in **both** [`greenfield_word_freq`](./greenfield_word_freq) and [`brownfield_word_freq`](./brownfield_word_freq),
-unconditionally, on _every_ commit. Either cratefailing blocks the commit. 
+unconditionally, on _every_ git commit. Either crate failing blocks the commit. 
 Bypass option (**not recommended**): `git commit --no-verify`.
 
 ---

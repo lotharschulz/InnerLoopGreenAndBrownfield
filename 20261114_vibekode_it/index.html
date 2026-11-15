@@ -1025,13 +1025,14 @@ turn-gate fired: event=Stop agent=main
         </ul>
       </div>
       <div class="compare red">
-        <h3>Lose: context rot</h3>
+        <h3>Lose: risk of context rot</h3>
         <ul class="clean">
           <li>Too big → agents hallucinate or ignore instructions (“lost in the middle”)</li>
           <li>Drift: files say one tech stack, the code another</li>
           <li>Too many Don’ts → agent logic loops. Write Do’s</li>
         </ul>
         <p class="muted" style="font-size:22px; margin-top:14px">Watch the context: <code>ccstatusline</code></p>
+        <img src="assets/ccstatusline_sample.png" alt="ccstatusline in Claude Code showing model, token counts, context usage bar and cache hit rate" style="display:block; width:100%; height:auto; margin-top:10px; border-radius:12px">
       </div>
     </div>
   </section>

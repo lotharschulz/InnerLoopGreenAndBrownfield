@@ -279,6 +279,8 @@ which is why it's drawn dashed.
 
 Both are keyed on `rustc --version` plus a content hash of every tracked and
 untracked file under `src/` and `tests/`, `Cargo.toml`, and `verify.sh`.
+The turn snapshot is broader: it hashes `git status --porcelain`, 
+git diff HEAD and the content of untracked files across the whole repo.
 
 `MAX_ATTEMPTS=2`, deliberately kept **below** the platform's own consecutive-stop-block
 cap (default ~8) — this budget has to bind first, or the platform's cap becomes the

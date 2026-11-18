@@ -155,6 +155,10 @@
   #intro .qr { width: 170px; height: 170px; image-rendering: pixelated; border-radius: 12px; border: 6px solid #fff; box-shadow: 0 0 0 2px var(--line); }
   #intro .links { grid-column: 1 / -1; display: flex; justify-content: space-between; font: 500 23px/1.3 var(--font-mono); }
 
+  /* ---------- feedback: full-bleed 16:9 image ---------- */
+  #feedback { padding: 0; overflow: hidden; }
+  #feedback img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
   /* ---------- feedback loop diagram ---------- */
   .aoc { display: grid; grid-template-columns: repeat(4, 1fr); gap: 26px; margin: 10px 0 18px; }
   .aoc .box { background: #F7F1E9; border: 2px solid var(--line); border-radius: 24px; padding: 24px 24px; position: relative; }
@@ -265,8 +269,8 @@
     #controls { display: flex; }
     #hint { display: none; }
     .card { box-shadow: 0 10px 30px -18px rgba(60, 40, 20, .35); }
-    /* each fading slide gets its own GPU layer; leaving a frame fades all cards at once and iOS kills the page (blank, reload) */
-    .step { transition: none; }
+    /* each fading element gets its own GPU layer; fades during a zoom flight make iOS kill the page (blank, reload) */
+    .step, .frame .panel { transition: none; }
   }
 
   /* portrait phones: slides are 16:9, so ask for landscape instead of showing unreadable text */
@@ -1210,6 +1214,11 @@ turn-gate fired: event=Stop agent=main
         <div><b style="font-family:var(--font-head); font-size:28px">Thank you!</b><br><span class="muted" style="font-size:19px">Questions?</span></div>
       </div>
     </div>
+  </section>
+
+  <!-- mirrors #intro on the other side of #title; rotate 720 matches #conclusion so the camera does not spin back -->
+  <section class="step card" id="feedback" data-x="-6000" data-y="-9800" data-rotate="720" data-scale="2">
+    <img src="assets/feedbackslide.JPG" alt="We ask for your feedback. Please vote now!">
   </section>
 
 </div>

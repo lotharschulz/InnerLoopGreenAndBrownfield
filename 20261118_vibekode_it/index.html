@@ -149,7 +149,7 @@
   #intro .product { width: 860px; height: 475px; object-fit: cover; border-radius: 26px; box-shadow: 0 0 0 2px var(--line); }
   #intro .about { display: flex; flex-direction: column; justify-content: center; }
   #intro h2 { font-size: 66px; margin-bottom: 6px; }
-  #intro .role { font-size: 30px; color: var(--muted); margin-bottom: 30px; }
+  #intro .role { font-size: 15px; color: var(--muted); margin-bottom: 15px; }
   #intro .faces { display: flex; align-items: center; gap: 28px; }
   #intro .photo { width: 180px; height: 180px; border-radius: 50%; object-fit: cover; border: 8px solid var(--accent-soft); flex: none; }
   #intro .qr { width: 170px; height: 170px; image-rendering: pixelated; border-radius: 12px; border: 6px solid #fff; box-shadow: 0 0 0 2px var(--line); }
@@ -326,7 +326,7 @@
     <div class="kicker">VibeKode IT · 18 Nov 2026</div>
     <h1>Beyond the Code</h1>
     <div class="sub">Verify Script as<br>Inner Feedback Loop</div>
-    <div class="who"><b>Lothar Schulz</b><span class="muted">CTO · pulsation IT GmbH</span></div>
+    <div class="who"><b>Lothar Schulz</b><span class="muted">&nbsp;</span></div>
     <img class="title-qr" src="assets/qrcode.png" alt="QR code linking to these slides">
     <svg class="loops" width="360" height="360" viewBox="-210 -210 420 420" aria-hidden="true">
       <circle r="200" fill="none" stroke="#26324A" stroke-width="6"/>
@@ -945,7 +945,7 @@ turn-gate fired: event=Stop agent=main
           <tr><td>3rd</td><td><code>exit 1</code> · give up</td><td><code>exit 1</code> · give up</td></tr>
         </table>
         <p style="font-size:23px; margin-top:14px">Greenfield counts failing <b>verify runs</b>, brownfield counts <b>send-backs</b>. Read the counter logic, not the constant.</p>
-        <p class="muted" style="font-size:21px; margin-top:10px">Both stay below the platform cap of consecutive Stop blocks. They don’t bound a work loop where the agent never tries to stop — use max turns, a spend cap (<code>maxTurns</code>, <code>maxBudgetUsd</code>) and a wall-clock timeout.</p>
+        <p class="muted" style="font-size:21px; margin-top:10px">They don’t bound a work loop where the agent never tries to stop — use max turns, a spend cap (<code>maxTurns</code>, <code>maxBudgetUsd</code>) and a wall-clock timeout.</p>
       </div>
       <div>
         <h3>Subagents</h3>
@@ -1168,7 +1168,10 @@ turn-gate fired: event=Stop agent=main
       <div class="tier tg"><b>A hook makes a policy true</b>deterministic, not probabilistic</div>
       <div class="tier tg"><b>Isolation gives it a clean slate</b>subagents, worktrees</div>
     </div>
-    <div class="tier tg"><b>Confinement and verification let it act without permission at every step</b>each of these options offers a choice</div>
+    <div class="cols cols-2" style="gap:24px; margin:18px 0">
+      <div class="tier tg"><b>Confinement and verification</b></div>
+      <div class="tier tg"><b>Skill evaluation</b></div>
+    </div>
     <div class="quote grow" style="margin-top:18px; font-size:32px">The difference between an agent that’s capable and one that’s dependable lives in the harness.</div>
   </section>
   <section class="step card" id="human" data-x="-4303" data-y="1316" data-rotate="613" data-scale="1">
@@ -1217,10 +1220,11 @@ turn-gate fired: event=Stop agent=main
   </section>
 
   <!-- mirrors #intro on the other side of #title; rotate 720 matches #conclusion so the camera does not spin back -->
+  <!-- 
   <section class="step card" id="feedback" data-x="-6000" data-y="-9800" data-rotate="720" data-scale="2">
     <img src="assets/feedbackslide.JPG" alt="We ask for your feedback. Please vote now!">
   </section>
-
+-->
 </div>
 
 <div id="hud"><div id="progress"></div></div>

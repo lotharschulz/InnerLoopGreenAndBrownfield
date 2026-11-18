@@ -265,6 +265,8 @@
     #controls { display: flex; }
     #hint { display: none; }
     .card { box-shadow: 0 10px 30px -18px rgba(60, 40, 20, .35); }
+    /* each fading slide gets its own GPU layer; leaving a frame fades all cards at once and iOS kills the page (blank, reload) */
+    .step { transition: none; }
   }
 
   /* portrait phones: slides are 16:9, so ask for landscape instead of showing unreadable text */
@@ -546,7 +548,7 @@
       </table>
       <div>
         <div class="quote" style="font-size:28px; margin-bottom:22px">The Stop event’s superpower is preventing itself.</div>
-        <p style="font-size:23px">Loop guard: Claude Code ends the turn after <b>8</b> consecutive blocks → keep your own <code>MAX_ATTEMPTS</code> below it.</p>
+        <p style="font-size:23px">&nbsp;</p>
       </div>
     </div>
   </section>

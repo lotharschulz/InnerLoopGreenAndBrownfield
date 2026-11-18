@@ -216,7 +216,7 @@
 
 
   /* ---------- additions for the VibeKode IT deck ---------- */
-  #stage { position: fixed; left: 0; top: 0; width: 100%; height: var(--app-height, 100dvh); overflow: hidden; }
+  #stage { position: fixed; left: 0; top: var(--app-top, 0px); width: 100%; height: var(--app-height, 100dvh); overflow: hidden; }
   #title .title-qr { position: absolute; right: 100px; bottom: 60px; width: 170px; height: 170px; image-rendering: pixelated; border-radius: 12px; box-shadow: 0 0 0 2px var(--line); }
   .compare { border-radius: 26px; padding: 26px 32px; border: 2px solid var(--line); }
   .compare h3 { font-size: 34px; margin-bottom: 12px; }
@@ -272,6 +272,8 @@
   #rotate-hint button { width: 32px; height: 32px; border: 0; border-radius: 50%; background: rgba(255,255,255,.7); font-size: 14px; cursor: pointer; color: var(--ink); }
   @media (orientation: portrait) and (max-width: 700px) { body:not(.rotate-dismissed) #rotate-hint { display: flex; } }
   @media (max-width: 640px) { #hint { font-size: 11px; } }
+  /* narrow screens: centered controls would cover the motion toggle, so stack it above them */
+  @media (max-width: 520px) { #motion { bottom: calc(60px + env(safe-area-inset-bottom)); } }
 </style>
 </head>
 <body>
@@ -1233,6 +1235,7 @@ turn-gate fired: event=Stop agent=main
   const ZOOM_RATIO_FOR_SCALED_PAN = 3;
   // Slow devices (phones repainting the huge rings SVG) would otherwise finish the flight in 1–2 frames.
   const MAX_FRAME_STEP_MS = 50;
+  const ORIENTATION_SETTLE_DELAYS_MS = [100, 300, 700];
   const MOTION_STORAGE_KEY = 'slides-motion';
 
   const stage = document.getElementById('stage');
@@ -1279,8 +1282,14 @@ turn-gate fired: event=Stop agent=main
   let animationFrame = null;
   let overview = false;
 
-  // Mobile browsers change innerHeight when the address bar shows/hides; size the stage to what is visible.
-  const syncStageSize = () => stage.style.setProperty('--app-height', `${innerHeight}px`);
+  // Mobile browsers change the visible area when toolbars show/hide or the phone rotates; iOS Chrome
+  // reports a stale innerHeight and can scroll the page, so size and place the stage from visualViewport.
+  const syncStageSize = () => {
+    if (scrollX || scrollY) scrollTo(0, 0);
+    const visible = window.visualViewport;
+    stage.style.setProperty('--app-height', `${visible ? visible.height : innerHeight}px`);
+    stage.style.setProperty('--app-top', `${visible ? visible.offsetTop : 0}px`);
+  };
   const viewportScale = () => Math.min(stage.clientWidth / SLIDE_WIDTH, stage.clientHeight / SLIDE_HEIGHT);
   const render = (c) => {
     camera.style.transform = `scale(${viewportScale() / c.s}) rotate(${-c.r}deg) translate(${-c.x}px, ${-c.y}px)`;
@@ -1392,7 +1401,10 @@ turn-gate fired: event=Stop agent=main
 
   const onResize = () => { syncStageSize(); render(cam); };
   addEventListener('resize', onResize);
-  addEventListener('orientationchange', () => setTimeout(onResize, 200));
+  window.visualViewport?.addEventListener('resize', onResize);
+  window.visualViewport?.addEventListener('scroll', onResize);
+  // iOS reports final sizes only after the rotation animation; re-measure until it has settled.
+  addEventListener('orientationchange', () => ORIENTATION_SETTLE_DELAYS_MS.forEach((delay) => setTimeout(onResize, delay)));
   addEventListener('hashchange', () => {
     const index = steps.findIndex((el) => `#${el.id}` === location.hash);
     if (index >= 0 && index !== current) goTo(index);
